@@ -1,0 +1,179 @@
+/* Importamos Tailwind CSS para las clases de utilidad */
+@import "tailwindcss";
+
+
+/* Configuracion del tema de Tailwind para usar nuestras fuentes personalizadas */
+@theme inline {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+}
+
+/* Variables CSS globales que definen los colores y medidas de toda la aplicacion */
+/* Usamos oklch que es un espacio de color mas moderno y preciso */
+:root {
+  --background: oklch(0 0 0);              /* color de fondo principal, negro puro */
+  --foreground: oklch(1 0 0);              /* color del texto principal, blanco puro */
+  --card: oklch(0.1 0 0 / 0.1);            /* fondo de las tarjetas, muy oscuro y transparente */
+  --card-foreground: oklch(1 0 0);         /* texto dentro de las tarjetas */
+  --primary: #00E9E9;                       /* color principal de la marca, ese cyan/turquesa de Sertena */
+  --primary-foreground: oklch(0 0 0);       /* texto sobre el color principal */
+  --secondary: oklch(0.65 0.25 25);         /* color secundario, tono anaranjado */
+  --secondary-foreground: oklch(1 0 0);     /* texto sobre el color secundario */
+  --muted: oklch(1 0 0 / 0.5);             /* color atenuado para textos secundarios */
+  --muted-foreground: oklch(0.7 0 0);       /* texto sobre fondos atenuados */
+  --border: oklch(1 0 0 / 0.2);            /* color de los bordes */
+  --input: oklch(1 0 0 / 0.1);             /* fondo de los campos de entrada */
+  --ring: oklch(1 0 0 / 0.3);              /* resplandor del foco de los elementos interactivos */
+  --radius: 0.75rem;                        /* radio de borde por defecto para esquinas redondeadas */
+}
+
+
+
+/* Nos aseguramos de que el HTML y el body ocupen toda la pantalla */
+html, body {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Estilos base del body */
+body {
+  font-family: var(--font-sans);             /* usamos Inter como fuente principal */
+  -webkit-font-smoothing: antialiased;       /* suavizado de fuentes en navegadores WebKit */
+  -moz-osx-font-smoothing: grayscale;        /* suavizado de fuentes en Firefox */
+  text-rendering: optimizeLegibility;        /* mejora la legibilidad del texto */
+  background: #000;                          /* fondo negro */
+  color: #fff;                               /* texto blanco */
+}
+
+/* El contenedor raiz donde React monta toda la aplicacion */
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ===== Efecto de cristal liquido (glassmorphism) ===== */
+/* Este es el estilo base para las tarjetas con efecto de vidrio esmerilado */
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.05);                     /* fondo casi transparente con un poquito de blanco */
+  backdrop-filter: blur(24px) saturate(1.8);                  /* desenfoca lo que hay detras y sube la saturacion */
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);          /* lo mismo pero para Safari */
+  border: 1px solid rgba(255, 255, 255, 0.12);               /* borde sutil blanco transparente */
+  border-radius: 24px;                                        /* esquinas bien redondeadas */
+  box-shadow:
+    0 8px 32px rgba(0, 233, 233, 0.08),                       /* sombra externa con el color cyan de la marca */
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),                   /* brillo en la parte de arriba, simula luz */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);                       /* sombra en la parte de abajo, da profundidad */
+}
+
+/* Pseudo-elemento que agrega un degradado sutil encima de la tarjeta */
+/* Esto le da mas realismo al efecto de cristal */
+.liquid-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;                                                    /* ocupa todo el espacio de la tarjeta */
+  border-radius: inherit;                                      /* hereda las esquinas redondeadas del padre */
+  background: linear-gradient(
+    135deg,                                                    /* degradado diagonal */
+    rgba(255, 255, 255, 0.08) 0%,                             /* blanco tenue arriba a la izquierda */
+    rgba(255, 255, 255, 0.02) 50%,                             /* casi invisible en el centro */
+    rgba(0, 233, 233, 0.03) 100%                               /* toque de cyan abajo a la derecha */
+  );
+  pointer-events: none;                                        /* no interfiere con los clicks */
+}
+
+/* ===== Estilos de los campos de texto del login ===== */
+.login-input {
+  width: 100%;                                                 /* ocupa todo el ancho disponible */
+  padding: 12px 20px;                                          /* espacio interno para que el texto no quede pegado */
+  background: rgba(255, 255, 255, 0.07);                       /* fondo oscuro transparente */
+  border: 1px solid rgba(255, 255, 255, 0.15);                 /* borde blanco sutil */
+  border-radius: 999px;                                        /* bordes totalmente redondeados, forma de capsula */
+  color: #fff;                                                 /* texto en blanco */
+  font-size: 14px;
+  font-family: var(--font-sans);                               /* usa la fuente Inter */
+  outline: none;                                               /* quita el borde por defecto del navegador al hacer foco */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);          /* transicion suave cuando cambia algun estilo */
+}
+
+/* Color del texto del placeholder cuando el campo esta vacio */
+.login-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);                            /* blanco bien tenue para que no distraiga */
+}
+
+/* Estilos cuando el usuario hace click en el campo (foco) */
+.login-input:focus {
+  border-color: rgba(0, 233, 233, 0.45);                       /* el borde cambia al color cyan de la marca */
+  background: rgba(255, 255, 255, 0.1);                         /* el fondo se aclara un poco */
+  box-shadow: 0 0 0 2px rgba(0, 233, 233, 0.08), 0 0 16px rgba(0, 233, 233, 0.06);  /* resplandor cyan alrededor */
+}
+
+/* ===== Estilos del boton de login ===== */
+.login-button {
+  display: inline-block;
+  padding: 11px 48px;                                          /* boton con bastante espacio horizontal */
+  background: rgba(255, 255, 255, 0.08);                       /* fondo translucido */
+  border: 1px solid rgba(255, 255, 255, 0.25);                 /* borde blanco sutil */
+  border-radius: 999px;                                        /* forma de capsula */
+  font-size: 15px;
+  font-weight: 500;                                            /* peso medio de la fuente */
+  font-family: var(--font-sans);
+  color: rgba(255, 255, 255, 0.85);                            /* blanco ligeramente transparente */
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);          /* transicion suave */
+  letter-spacing: 0.3px;                                       /* un poquito de espacio entre letras */
+}
+
+/* Cuando el cursor pasa por encima del boton */
+.login-button:hover {
+  background: rgba(0, 233, 233, 0.12);                         /* el fondo cambia a un cyan transparente */
+  border-color: rgba(0, 233, 233, 0.4);                        /* el borde tambien se pone cyan */
+  color: #fff;                                                  /* el texto se pone blanco puro */
+  transform: translateY(-1px);                                  /* sube un pixel para dar sensacion de elevacion */
+  box-shadow: 0 4px 20px rgba(0, 233, 233, 0.15);              /* sombra cyan que refuerza la elevacion */
+}
+
+/* Cuando se hace click en el boton */
+.login-button:active {
+  transform: translateY(0);                                     /* vuelve a su posicion normal */
+}
+
+/* Cuando el boton esta deshabilitado (mientras carga por ejemplo) */
+.login-button:disabled {
+  opacity: 0.6;                                                 /* se pone mas transparente */
+  cursor: not-allowed;                                          /* el cursor cambia para indicar que no se puede hacer click */
+  transform: none;                                              /* no se mueve */
+}
+
+/* ===== Animaciones ===== */
+
+/* Animacion de aparecer desde abajo, se usa en muchos elementos del login */
+/* El elemento empieza invisible y 30px abajo, luego sube y aparece */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animacion de brillo que se mueve de izquierda a derecha */
+/* Da un efecto de reflejo como si fuera metal pulido */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Animacion de resplandor pulsante que se repite infinitamente */
+/* Hace que la sombra crezca y se achique creando un efecto de respiracion */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 233, 233, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(0, 233, 233, 0.2); }
+}
+
+/* Clase reutilizable para aplicar la animacion fadeInUp a cualquier elemento */
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}

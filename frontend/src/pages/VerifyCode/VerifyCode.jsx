@@ -1,0 +1,267 @@
+// Importamos los hooks necesarios de React
+import { useState, useRef, useEffect } from "react"
+// Hook para navegar entre paginas
+import { useNavigate } from "react-router-dom"
+// Componentes visuales reutilizables
+import AnimatedBackground from "../../components/ui/AnimatedBackground"
+import LiquidGlassCard from "../../components/ui/LiquidGlassCard"
+
+// Pagina para verificar el codigo de 5 digitos que se envio al correo
+export default function VerifyCode() {
+  // Arreglo de 5 posiciones vacias, una por cada digito del codigo
+  const [code, setCode] = useState(["", "", "", "", ""])
+  // Estado de carga mientras se valida el codigo
+  const [isLoading, setIsLoading] = useState(false)
+  // Referencias a cada uno de los 5 campos de texto para poder mover el foco entre ellos
+  const inputRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)]
+  const navigate = useNavigate()
+
+  // Efecto que se ejecuta cada vez que cambia el codigo
+  // Si los 5 digitos estan llenos, envia automaticamente
+  useEffect(() => {
+    if (code.every((val) => val !== "")) {
+      setIsLoading(true)
+      // Esperamos 1.5 segundos simulando la validacion y luego vamos a restablecer contraseña
+      const timer = setTimeout(() => {
+        setIsLoading(false)
+        navigate("/reset-password")
+      }, 1500)
+      // Limpiamos el timer si el componente se desmonta antes
+      return () => clearTimeout(timer)
+    }
+  }, [code, navigate])
+
+  // Maneja cuando el usuario escribe en un campo de digito
+  const handleChange = (index, value) => {
+    // Solo permitimos numeros, si pone letras no hacemos nada
+    if (!/^\d*$/.test(value)) return
+
+    // Copiamos el arreglo del codigo y ponemos solo el ultimo caracter que escribio
+    const newCode = [...code]
+    newCode[index] = value.substring(value.length - 1)
+    setCode(newCode)
+
+    // Si escribio algo y no es el ultimo campo, movemos el foco al siguiente
+    if (value && index < 4) {
+      inputRefs[index + 1].current.focus()
+    }
+  }
+
+  // Maneja cuando el usuario presiona una tecla
+  const handleKeyDown = (index, e) => {
+    // Si presiono Backspace (borrar)
+    if (e.key === "Backspace") {
+      if (code[index] === "" && index > 0) {
+        // Si el campo ya esta vacio, borramos el anterior y movemos el foco atras
+        const newCode = [...code]
+        newCode[index - 1] = ""
+        setCode(newCode)
+        inputRefs[index - 1].current.focus()
+      } else {
+        // Si tiene algo, solo lo borramos
+        const newCode = [...code]
+        newCode[index] = ""
+        setCode(newCode)
+      }
+    }
+  }
+
+  // Maneja cuando el usuario pega texto desde el portapapeles
+  const handlePaste = (e) => {
+    e.preventDefault()
+    const pastedData = e.clipboardData.getData("text").trim()
+    // Solo aceptamos si lo pegado son puros numeros
+    if (!/^\d+$/.test(pastedData)) return
+
+    // Tomamos los primeros 5 digitos del texto pegado
+    const digits = pastedData.slice(0, 5).split("")
+    const newCode = [...code]
+    digits.forEach((digit, i) => {
+      newCode[i] = digit
+    })
+    setCode(newCode)
+
+    // Movemos el foco al ultimo digito que se pego
+    const lastFilledIndex = Math.min(digits.length - 1, 4)
+    inputRefs[lastFilledIndex].current.focus()
+  }
+
+  // Funcion para reenviar el codigo si no llego
+  const handleResend = () => {
+    setIsLoading(true)
+    setTimeout(() => {
+      setIsLoading(false)
+      alert("Código reenviado con éxito")
+    }, 1200)
+  }
+
+  return (
+    // Contenedor principal centrado en la pantalla
+    <div className="relative w-full h-screen flex items-center justify-center overflow-hidden">
+
+      {/* Fondo animado */}
+      <AnimatedBackground
+        colors={["#000000", "#001a1a", "#003333", "#00E9E9"]}
+        speed={0.5}
+        backgroundColor="#000000"
+      />
+
+      {/* Tarjeta de verificacion */}
+      <div className="relative" style={{ zIndex: 10 }}>
+        <LiquidGlassCard>
+
+          {/* Encabezado */}
+          <div
+            style={{
+              textAlign: "center",
+              marginBottom: "36px",
+              animation: "fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both",
+            }}
+          >
+            <h1
+              style={{
+                fontSize: "30px",
+                fontWeight: "700",
+                color: "#fff",
+                marginBottom: "12px",
+                letterSpacing: "-0.5px",
+              }}
+            >
+              Recuperacion de contraseña
+            </h1>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "rgba(255,255,255,0.7)",
+                lineHeight: "1.5",
+                maxWidth: "380px",
+                margin: "0 auto",
+              }}
+            >
+              Ingrese el codigo que leenviams a su correo, el codigo podria tardar en llegar de 2 a 3 minutos.
+            </p>
+          </div>
+
+          {/* Formulario con los campos de digitos */}
+          <form onSubmit={(e) => e.preventDefault()}>
+
+            {/* Etiqueta del codigo */}
+            <div
+              style={{
+                marginBottom: "24px",
+                animation: "fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both",
+              }}
+            >
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "14px",
+                  fontWeight: "400",
+                  color: "rgba(255,255,255,0.7)",
+                  marginBottom: "16px",
+                }}
+              >
+                Ingrese el codigo de 5 digitos:
+              </label>
+
+              {/* Fila de 5 cuadros para los digitos */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  maxWidth: "360px",
+                  margin: "0 auto",
+                }}
+              >
+                {code.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={inputRefs[index]}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={digit}
+                    onChange={(e) => handleChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    onPaste={handlePaste}
+                    disabled={isLoading}
+                    style={{
+                      width: "60px",
+                      height: "60px",
+                      background: "rgba(255, 255, 255, 0.07)",
+                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      borderRadius: "16px",
+                      color: "#fff",
+                      fontSize: "24px",
+                      fontWeight: "600",
+                      textAlign: "center",
+                      outline: "none",
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                    className="verify-digit-input"
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Boton para reenviar el codigo */}
+            <div
+              style={{
+                textAlign: "center",
+                animation: "fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both",
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleResend}
+                className="login-button"
+                disabled={isLoading}
+              >
+                {isLoading ? "Validando..." : "Reenviar Codigo"}
+              </button>
+            </div>
+
+            {/* Enlace para regresar al login */}
+            <div
+              style={{
+                textAlign: "center",
+                marginTop: "24px",
+                animation: "fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  color: "rgba(255,255,255,0.65)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => (e.target.style.color = "#00E9E9")}
+                onMouseLeave={(e) => (e.target.style.color = "rgba(255,255,255,0.65)")}
+              >
+                ← Regresar al login
+              </button>
+            </div>
+          </form>
+        </LiquidGlassCard>
+      </div>
+
+      {/* Estilos para el resplandor cyan cuando se hace foco en un campo de digito */}
+      <style>{`
+        .verify-digit-input:focus {
+          border-color: rgba(0, 233, 233, 0.5) !important;
+          background: rgba(255, 255, 255, 0.12) !important;
+          box-shadow: 0 0 16px rgba(0, 233, 233, 0.15) !important;
+        }
+      `}</style>
+    </div>
+  )
+}
