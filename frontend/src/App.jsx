@@ -14,6 +14,7 @@ import Servicios from './pages/Servicios/Servicios'
 import Clientes from './pages/Clientes/Clientes'
 import Empleados from './pages/Empleados/Empleados'
 import Resenias from './pages/Resenias/Resenias'
+import ProximasCitas from './pages/ProximasCitas/ProximasCitas'
 
 // Componente principal de la aplicacion
 // Aqui se definen todas las rutas y a que pagina corresponde cada URL
@@ -47,6 +48,9 @@ function App() {
 
         {/* Ruta de gestion de reseñas */}
         <Route path="/resenias" element={<Resenias />} />
+
+        {/* Ruta de proximas citas */}
+        <Route path="/proximas-citas" element={<ProximasCitas />} />
 
         {/* Si el usuario pone cualquier otra URL, lo mandamos al login */}
         <Route path="*" element={<Navigate to="/login" replace />} />

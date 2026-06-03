@@ -16,7 +16,7 @@ export default function Sidebar({ activeTab = "Inicio" }) {
     { name: "Clientes", icon: "users", route: "/clientes" },
     { name: "Empleados", icon: "id-badge", route: "/empleados" },
     { name: "Reseñas", icon: "star", route: "/resenias" },
-    { name: "Proximas citas", icon: "calendar", route: null },
+    { name: "Proximas citas", icon: "calendar", route: "/proximas-citas" },
   ]
 
   // Funcion para renderizar los iconos SVG de forma dinamica
