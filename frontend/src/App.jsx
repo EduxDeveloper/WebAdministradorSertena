@@ -12,6 +12,8 @@ import ResetPassword from './pages/ResetPassword/ResetPassword'
 import Dashboard from './pages/Dashboard/Dashboard'
 import Servicios from './pages/Servicios/Servicios'
 import Clientes from './pages/Clientes/Clientes'
+import Empleados from './pages/Empleados/Empleados'
+import Resenias from './pages/Resenias/Resenias'
 
 // Componente principal de la aplicacion
 // Aqui se definen todas las rutas y a que pagina corresponde cada URL
@@ -39,6 +41,12 @@ function App() {
 
         {/* Ruta del catalogo de clientes */}
         <Route path="/clientes" element={<Clientes />} />
+
+        {/* Ruta de gestion de empleados */}
+        <Route path="/empleados" element={<Empleados />} />
+
+        {/* Ruta de gestion de reseñas */}
+        <Route path="/resenias" element={<Resenias />} />
 
         {/* Si el usuario pone cualquier otra URL, lo mandamos al login */}
         <Route path="*" element={<Navigate to="/login" replace />} />

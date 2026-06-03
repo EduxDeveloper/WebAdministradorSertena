@@ -14,8 +14,8 @@ export default function Sidebar({ activeTab = "Inicio" }) {
     { name: "Inicio", icon: "home", route: "/dashboard" },
     { name: "Servicios", icon: "tools", route: "/servicios" },
     { name: "Clientes", icon: "users", route: "/clientes" },
-    { name: "Empleados", icon: "id-badge", route: null },
-    { name: "Reseñas", icon: "star", route: null },
+    { name: "Empleados", icon: "id-badge", route: "/empleados" },
+    { name: "Reseñas", icon: "star", route: "/resenias" },
     { name: "Proximas citas", icon: "calendar", route: null },
   ]
 
