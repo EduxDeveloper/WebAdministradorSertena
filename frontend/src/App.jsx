@@ -10,6 +10,8 @@ import RecoveryEmail from './pages/RecoveryEmail/RecoveryEmail'
 import VerifyCode from './pages/VerifyCode/VerifyCode'
 import ResetPassword from './pages/ResetPassword/ResetPassword'
 import Dashboard from './pages/Dashboard/Dashboard'
+import Servicios from './pages/Servicios/Servicios'
+import Clientes from './pages/Clientes/Clientes'
 
 // Componente principal de la aplicacion
 // Aqui se definen todas las rutas y a que pagina corresponde cada URL
@@ -31,6 +33,12 @@ function App() {
 
         {/* Ruta del dashboard principal, el panel de administracion */}
         <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* Ruta del catalogo de servicios */}
+        <Route path="/servicios" element={<Servicios />} />
+
+        {/* Ruta del catalogo de clientes */}
+        <Route path="/clientes" element={<Clientes />} />
 
         {/* Si el usuario pone cualquier otra URL, lo mandamos al login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
