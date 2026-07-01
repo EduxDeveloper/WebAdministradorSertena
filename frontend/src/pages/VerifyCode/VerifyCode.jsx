@@ -5,44 +5,70 @@ import { useNavigate } from "react-router-dom"
 // Componentes visuales reutilizables
 import AnimatedBackground from "../../components/ui/AnimatedBackground"
 import LiquidGlassCard from "../../components/ui/LiquidGlassCard"
+// Hook de autenticacion para conectar con el backend
+import useAuth from "../../hooks/useAuth"
 
-// Pagina para verificar el codigo de 5 digitos que se envio al correo
+// Pagina para verificar el codigo de 6 digitos que se envio al correo
+// El backend genera un randomCode con crypto.randomBytes(3).toString('hex') = 6 caracteres hexadecimales
 export default function VerifyCode() {
-  // Arreglo de 5 posiciones vacias, una por cada digito del codigo
-  const [code, setCode] = useState(["", "", "", "", ""])
+  // Arreglo de 6 posiciones vacias, una por cada caracter del codigo hex
+  const [code, setCode] = useState(["", "", "", "", "", ""])
   // Estado de carga mientras se valida el codigo
   const [isLoading, setIsLoading] = useState(false)
-  // Referencias a cada uno de los 5 campos de texto para poder mover el foco entre ellos
-  const inputRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)]
+  // Estado para mostrar mensajes de error
+  const [error, setError] = useState("")
+  // Referencias a cada uno de los 6 campos de texto para poder mover el foco entre ellos
+  const inputRefs = [
+    useRef(null), useRef(null), useRef(null),
+    useRef(null), useRef(null), useRef(null)
+  ]
   const navigate = useNavigate()
+  // Funcion para verificar el codigo que viene del contexto
+  const { verifyRecoveryCode } = useAuth()
 
   // Efecto que se ejecuta cada vez que cambia el codigo
-  // Si los 5 digitos estan llenos, envia automaticamente
+  // Si los 6 caracteres estan llenos, envia automaticamente
   useEffect(() => {
     if (code.every((val) => val !== "")) {
-      setIsLoading(true)
-      // Esperamos 1.5 segundos simulando la validacion y luego vamos a restablecer contraseña
-      const timer = setTimeout(() => {
-        setIsLoading(false)
-        navigate("/reset-password")
-      }, 1500)
-      // Limpiamos el timer si el componente se desmonta antes
-      return () => clearTimeout(timer)
+      handleVerify(code.join(""))
     }
-  }, [code, navigate])
+  }, [code])
 
-  // Maneja cuando el usuario escribe en un campo de digito
+  // Funcion que hace la llamada real al backend para verificar el codigo
+  const handleVerify = async (fullCode) => {
+    setError("")
+    setIsLoading(true)
+
+    // Llamada REAL al backend: verifica el codigo OTP en la cookie de recuperacion
+    const result = await verifyRecoveryCode({ code: fullCode })
+
+    setIsLoading(false)
+
+    if (!result.ok) {
+      // Si el codigo es invalido, mostramos el error y limpiamos los campos
+      setError(result.message)
+      setCode(["", "", "", "", "", ""])
+      // Ponemos el foco de vuelta al primer campo
+      inputRefs[0].current?.focus()
+      return
+    }
+
+    // Si el codigo es correcto, navegamos a restablecer contraseña
+    navigate("/reset-password")
+  }
+
+  // Maneja cuando el usuario escribe en un campo de caracter
   const handleChange = (index, value) => {
-    // Solo permitimos numeros, si pone letras no hacemos nada
-    if (!/^\d*$/.test(value)) return
+    // Solo permitimos caracteres hexadecimales (numeros 0-9 y letras a-f)
+    if (!/^[0-9a-fA-F]*$/.test(value)) return
 
     // Copiamos el arreglo del codigo y ponemos solo el ultimo caracter que escribio
     const newCode = [...code]
-    newCode[index] = value.substring(value.length - 1)
+    newCode[index] = value.substring(value.length - 1).toLowerCase()
     setCode(newCode)
 
     // Si escribio algo y no es el ultimo campo, movemos el foco al siguiente
-    if (value && index < 4) {
+    if (value && index < 5) {
       inputRefs[index + 1].current.focus()
     }
   }
@@ -70,29 +96,20 @@ export default function VerifyCode() {
   const handlePaste = (e) => {
     e.preventDefault()
     const pastedData = e.clipboardData.getData("text").trim()
-    // Solo aceptamos si lo pegado son puros numeros
-    if (!/^\d+$/.test(pastedData)) return
+    // Solo aceptamos si lo pegado son caracteres hexadecimales
+    if (!/^[0-9a-fA-F]+$/.test(pastedData)) return
 
-    // Tomamos los primeros 5 digitos del texto pegado
-    const digits = pastedData.slice(0, 5).split("")
+    // Tomamos los primeros 6 caracteres del texto pegado
+    const chars = pastedData.slice(0, 6).toLowerCase().split("")
     const newCode = [...code]
-    digits.forEach((digit, i) => {
-      newCode[i] = digit
+    chars.forEach((char, i) => {
+      newCode[i] = char
     })
     setCode(newCode)
 
-    // Movemos el foco al ultimo digito que se pego
-    const lastFilledIndex = Math.min(digits.length - 1, 4)
+    // Movemos el foco al ultimo caracter que se pego
+    const lastFilledIndex = Math.min(chars.length - 1, 5)
     inputRefs[lastFilledIndex].current.focus()
-  }
-
-  // Funcion para reenviar el codigo si no llego
-  const handleResend = () => {
-    setIsLoading(true)
-    setTimeout(() => {
-      setIsLoading(false)
-      alert("Código reenviado con éxito")
-    }, 1200)
   }
 
   return (
@@ -141,6 +158,24 @@ export default function VerifyCode() {
               Ingrese el codigo que leenviams a su correo, el codigo podria tardar en llegar de 2 a 3 minutos.
             </p>
           </div>
+
+          {/* Mensaje de error si el código es inválido */}
+          {error && (
+            <div
+              style={{
+                padding: '10px 14px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: '10px',
+                color: '#fca5a5',
+                fontSize: '13px',
+                marginBottom: '20px',
+                textAlign: 'center',
+              }}
+            >
+              {error}
+            </div>
+          )}
 
           {/* Formulario con los campos de digitos */}
           <form onSubmit={(e) => e.preventDefault()}>

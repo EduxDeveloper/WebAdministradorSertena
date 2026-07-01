@@ -16,41 +16,30 @@ import Empleados from './pages/Empleados/Empleados'
 import Resenias from './pages/Resenias/Resenias'
 import ProximasCitas from './pages/ProximasCitas/ProximasCitas'
 
+// Ruta protegida: solo deja pasar si el admin esta autenticado
+import PrivateRoute from './components/PrivateRoute'
+
 // Componente principal de la aplicacion
 // Aqui se definen todas las rutas y a que pagina corresponde cada URL
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Ruta del login, es la pantalla principal de inicio de sesion */}
+        {/* Rutas publicas: login y recuperacion de contraseña */}
         <Route path="/login" element={<Login />} />
-
-        {/* Ruta para recuperar contraseña, el usuario ingresa su correo */}
         <Route path="/recovery-email" element={<RecoveryEmail />} />
-
-        {/* Ruta para verificar el codigo de 5 digitos que se envia por correo */}
         <Route path="/verify-code" element={<VerifyCode />} />
-
-        {/* Ruta para restablecer la contraseña despues de verificar el codigo */}
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Ruta del dashboard principal, el panel de administracion */}
-        <Route path="/dashboard" element={<Dashboard />} />
-
-        {/* Ruta del catalogo de servicios */}
-        <Route path="/servicios" element={<Servicios />} />
-
-        {/* Ruta del catalogo de clientes */}
-        <Route path="/clientes" element={<Clientes />} />
-
-        {/* Ruta de gestion de empleados */}
-        <Route path="/empleados" element={<Empleados />} />
-
-        {/* Ruta de gestion de reseñas */}
-        <Route path="/resenias" element={<Resenias />} />
-
-        {/* Ruta de proximas citas */}
-        <Route path="/proximas-citas" element={<ProximasCitas />} />
+        {/* Rutas privadas: solo accesibles si el admin inicio sesion */}
+        <Route element={<PrivateRoute />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/servicios" element={<Servicios />} />
+          <Route path="/clientes" element={<Clientes />} />
+          <Route path="/empleados" element={<Empleados />} />
+          <Route path="/resenias" element={<Resenias />} />
+          <Route path="/proximas-citas" element={<ProximasCitas />} />
+        </Route>
 
         {/* Si el usuario pone cualquier otra URL, lo mandamos al login */}
         <Route path="*" element={<Navigate to="/login" replace />} />

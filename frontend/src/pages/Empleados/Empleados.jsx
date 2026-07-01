@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
+import useAuth from "../../hooks/useAuth"
 
 /**
  * Pagina de Gestión de Empleados - Muestra una tabla con la información de los empleados
@@ -8,94 +9,73 @@ import Sidebar from "../../components/ui/Sidebar"
  */
 export default function Empleados() {
   const [showModal, setShowModal] = useState(false)
+  const [empleados, setEmpleados] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { fetchApi } = useAuth()
 
   // Estado del formulario del modal para agregar un nuevo empleado
   const [formData, setFormData] = useState({
     nombre: "",
     apellido: "",
-    correo: "",
-    contrasena: "",
+    email: "",
+    contraseña: "",
     salario: "",
-    estado: "Activo",
+    estado: "activo",
     verificado: true,
   })
 
-  // Datos quemados de empleados para la tabla
-  const [empleados] = useState([
-    {
-      id: 1,
-      nombre: "Carlos",
-      apellido: "Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      salario: "$750",
-      estado: "Activo",
-      verificado: true,
-    },
-    {
-      id: 2,
-      nombre: "Carlos",
-      apellido: "Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      salario: "$750",
-      estado: "Activo",
-      verificado: true,
-    },
-    {
-      id: 3,
-      nombre: "Carlos",
-      apellido: "Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      salario: "$750",
-      estado: "Activo",
-      verificado: true,
-    },
-    {
-      id: 4,
-      nombre: "Carlos",
-      apellido: "Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      salario: "$750",
-      estado: "Activo",
-      verificado: true,
-    },
-    {
-      id: 5,
-      nombre: "Carlos",
-      apellido: "Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      salario: "$750",
-      estado: "Activo",
-      verificado: true,
-    },
-    {
-      id: 6,
-      nombre: "Carlos",
-      apellido: "Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      salario: "$750",
-      estado: "Activo",
-      verificado: true,
-    },
-    {
-      id: 7,
-      nombre: "Carlos",
-      apellido: "Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      salario: "$750",
-      estado: "Activo",
-      verificado: true,
-    },
-  ])
+  // Cargar empleados al montar el componente
+  useEffect(() => {
+    loadEmpleados()
+  }, [])
+
+  const loadEmpleados = async () => {
+    try {
+      setLoading(true)
+      const data = await fetchApi("/empleados/obtener")
+      setEmpleados(data || [])
+    } catch (error) {
+      console.error("Error al cargar empleados:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Guardar un nuevo empleado
+  const handleSaveEmpleado = async () => {
+    try {
+      await fetchApi("/empleados/crear", {
+        method: "POST",
+        body: JSON.stringify(formData),
+      })
+      handleCloseModal()
+      loadEmpleados() // Recargar la tabla
+    } catch (error) {
+      console.error("Error al crear empleado:", error)
+      alert("Hubo un error al crear el empleado: " + error.message)
+    }
+  }
+
+  // Eliminar un empleado
+  const handleDeleteEmpleado = async (id) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este empleado?")) return
+    try {
+      await fetchApi(`/empleados/eliminar/${id}`, { method: "DELETE" })
+      loadEmpleados()
+    } catch (error) {
+      console.error("Error al eliminar empleado:", error)
+    }
+  }
 
   // Resetear el formulario a sus valores iniciales
   const resetForm = () => {
     setFormData({
       nombre: "",
       apellido: "",
-      correo: "",
-      contrasena: "",
+      email: "",
+      contraseña: "",
       salario: "",
-      estado: "Activo",
+      estado: "activo",
       verificado: true,
     })
   }
@@ -107,7 +87,7 @@ export default function Empleados() {
   }
 
   // Contar empleados activos
-  const empleadosActivos = empleados.filter(e => e.estado === "Activo").length
+  const empleadosActivos = empleados.filter(e => e.estado?.toLowerCase() === "activo").length
   const totalEmpleados = empleados.length
 
   return (
@@ -234,62 +214,76 @@ export default function Empleados() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {empleados.map((empleado) => (
-                  <tr
-                    key={empleado.id}
-                    className="hover:bg-white/[0.03] transition-colors duration-200"
-                  >
-                    <td className="px-6 py-5 text-sm font-medium text-white/90">{empleado.nombre}</td>
-                    <td className="px-6 py-5 text-sm text-white/60">{empleado.apellido}</td>
-                    <td className="px-6 py-5 text-sm text-white/60">{empleado.correo}</td>
-                    <td className="px-6 py-5 text-sm text-white/60">{empleado.salario}</td>
-                    <td className="px-6 py-5 text-sm">
-                      <span
-                        className="px-3 py-1.5 rounded-full text-xs font-medium flex w-fit"
-                        style={{
-                          background: empleado.estado === "Activo" 
-                            ? "rgba(16, 185, 129, 0.2)"
-                            : "rgba(107, 114, 128, 0.2)",
-                          color: empleado.estado === "Activo" 
-                            ? "#10b981"
-                            : "#9ca3af",
-                        }}
-                      >
-                        • {empleado.estado}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center justify-center">
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="#10b981"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <button
-                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer ml-auto"
-                        style={{
-                          background: "rgba(255, 255, 255, 0.08)",
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
-                        }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
-                      </button>
-                    </td>
+                {loading ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-5 text-center text-white/50">Cargando empleados...</td>
                   </tr>
-                ))}
+                ) : empleados.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-5 text-center text-white/50">No hay empleados registrados</td>
+                  </tr>
+                ) : (
+                  empleados.map((empleado) => (
+                    <tr
+                      key={empleado._id}
+                      className="hover:bg-white/[0.03] transition-colors duration-200"
+                    >
+                      <td className="px-6 py-5 text-sm font-medium text-white/90">{empleado.nombre}</td>
+                      <td className="px-6 py-5 text-sm text-white/60">{empleado.apellido}</td>
+                      <td className="px-6 py-5 text-sm text-white/60">{empleado.email}</td>
+                      <td className="px-6 py-5 text-sm text-white/60">${empleado.salario}</td>
+                      <td className="px-6 py-5 text-sm">
+                        <span
+                          className="px-3 py-1.5 rounded-full text-xs font-medium flex w-fit"
+                          style={{
+                            background: empleado.estado?.toLowerCase() === "activo" 
+                              ? "rgba(16, 185, 129, 0.2)"
+                              : "rgba(107, 114, 128, 0.2)",
+                            color: empleado.estado?.toLowerCase() === "activo" 
+                              ? "#10b981"
+                              : "#9ca3af",
+                          }}
+                        >
+                          • {empleado.estado || "activo"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center justify-center">
+                          <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <button
+                          onClick={() => handleDeleteEmpleado(empleado._id)}
+                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer ml-auto"
+                          style={{
+                            background: "rgba(239, 68, 68, 0.15)",
+                            border: "1px solid rgba(239, 68, 68, 0.3)",
+                          }}
+                          title="Eliminar"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -368,8 +362,8 @@ export default function Empleados() {
               <label className="block text-sm font-semibold text-gray-800 mb-2">Email</label>
               <input
                 type="email"
-                value={formData.correo}
-                onChange={(e) => setFormData(prev => ({ ...prev, correo: e.target.value }))}
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                 style={{
                   background: "rgba(255,255,255,0.5)",
@@ -384,8 +378,8 @@ export default function Empleados() {
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Contraseña</label>
                 <input
                   type="password"
-                  value={formData.contrasena}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contrasena: e.target.value }))}
+                  value={formData.contraseña}
+                  onChange={(e) => setFormData(prev => ({ ...prev, contraseña: e.target.value }))}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
@@ -417,10 +411,10 @@ export default function Empleados() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setFormData(prev => ({ ...prev, estado: prev.estado === "Activo" ? "Inactivo" : "Activo" }))}
+                  onClick={() => setFormData(prev => ({ ...prev, estado: prev.estado === "activo" ? "inactivo" : "activo" }))}
                   className="relative w-14 h-7 rounded-full transition-all duration-300 cursor-pointer"
                   style={{
-                    background: formData.estado === "Activo"
+                    background: formData.estado === "activo"
                       ? "linear-gradient(135deg, #10b981, #34d399)"
                       : "rgba(0,0,0,0.2)",
                   }}
@@ -428,11 +422,11 @@ export default function Empleados() {
                   <div
                     className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300"
                     style={{
-                      left: formData.estado === "Activo" ? "calc(100% - 26px)" : "2px",
+                      left: formData.estado === "activo" ? "calc(100% - 26px)" : "2px",
                     }}
                   />
                 </button>
-                <span className={`text-sm font-medium ${formData.estado === "Activo" ? "text-emerald-600" : "text-gray-500"}`}>
+                <span className={`text-sm font-medium ${formData.estado === "activo" ? "text-emerald-600" : "text-gray-500"} capitalize`}>
                   {formData.estado}
                 </span>
               </div>
@@ -483,6 +477,7 @@ export default function Empleados() {
                 Cancelar
               </button>
               <button
+                onClick={handleSaveEmpleado}
                 className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer"
                 style={{
                   background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",

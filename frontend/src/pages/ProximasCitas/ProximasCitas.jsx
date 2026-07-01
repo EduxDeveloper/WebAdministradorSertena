@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
+import useAuth from "../../hooks/useAuth"
 
 /**
  * Componente DatePicker personalizado
@@ -150,6 +151,42 @@ export default function ProximasCitas() {
   const [calendarMonth, setCalendarMonth] = useState(new Date()) // Fecha actual real
   const [selectedDate, setSelectedDate] = useState(new Date()) // Hoy por defecto
 
+  const [citas, setCitas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { fetchApi } = useAuth()
+
+  useEffect(() => {
+    loadCitas()
+  }, [])
+
+  const loadCitas = async () => {
+    try {
+      setLoading(true)
+      const data = await fetchApi("/proyects")
+      // Mapear los datos del backend a la estructura que espera la UI
+      const mappedCitas = (data || []).map(cita => ({
+        id: cita._id,
+        servicio: cita.idService || "Servicio no asignado",
+        cliente: cita.idCustomer || "Cliente no asignado",
+        fecha: `${cita.dateStart || ''} - ${cita.dateEnd || ''}`,
+        precio: String(cita.finalPrice || "0"),
+        estado: cita.status || "Pendiente",
+        ubicacion: cita.clientLocation || "No especificada",
+        direccion: cita.clientDirection || "No especificada",
+        telefono: cita.clientPhone || "No especificado",
+        descripcion: cita.description || "Sin descripción",
+        // Guardamos los originales para editar
+        dateStart: cita.dateStart,
+        dateEnd: cita.dateEnd,
+      }))
+      setCitas(mappedCitas)
+    } catch (error) {
+      console.error("Error al cargar citas:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Estado del formulario del modal para editar una cita
   const [formData, setFormData] = useState({
     nombre: "",
@@ -164,75 +201,14 @@ export default function ProximasCitas() {
   })
 
   // Datos quemados de citas
-  const [citas] = useState([
-    {
-      id: 1,
-      servicio: "Instalación Eléctrica",
-      cliente: "Aceites del Norte S.A",
-      fecha: "15 Oct - 12 Oct",
-      precio: "$350",
-      estado: "Pendiente",
-      ubicacion: "Parque Industrial Santa Mónica, Calle 3",
-      direccion: "Av. Tecnológica #573 San Salvador",
-      telefono: "#503 1733-0932",
-      descripcion: "Implementación completa de red neumática de alta presión para línea de ensamblaje B. Incluye instalación de compresores rotativos, tendido de tubería de aluminio extruido de 2 pulgadas (50 metros), y calibración de 12 puntos de entrega con reguladores de precisión. Requiere pruebas de presión a 150 PSI y certificación de hermeticidad.",
-    },
-    {
-      id: 2,
-      servicio: "Instalación Eléctrica",
-      cliente: "Aceites del Norte S.A",
-      fecha: "15 Oct - 12 Oct",
-      precio: "$350",
-      estado: "Programado",
-      ubicacion: "Parque Industrial Santa Mónica, Calle 3",
-      direccion: "Av. Tecnológica #573 San Salvador",
-      telefono: "#503 1733-0932",
-      descripcion: "Instalación de sistema de iluminación LED de alta eficiencia. Incluye paneles solares y sistema de respaldo.",
-    },
-    {
-      id: 3,
-      servicio: "Instalación Eléctrica",
-      cliente: "Aceites del Norte S.A",
-      fecha: "15 Oct - 12 Oct",
-      precio: "$350",
-      estado: "Pendiente",
-      ubicacion: "Parque Industrial Santa Mónica, Calle 3",
-      direccion: "Av. Tecnológica #573 San Salvador",
-      telefono: "#503 1733-0932",
-      descripcion: "Instalación de sistema de iluminación LED de alta eficiencia. Incluye paneles solares y sistema de respaldo.",
-    },
-    {
-      id: 4,
-      servicio: "Instalación Eléctrica",
-      cliente: "Aceites del Norte S.A",
-      fecha: "15 Oct - 12 Oct",
-      precio: "$350",
-      estado: "Pendiente",
-      ubicacion: "Parque Industrial Santa Mónica, Calle 3",
-      direccion: "Av. Tecnológica #573 San Salvador",
-      telefono: "#503 1733-0932",
-      descripcion: "Instalación de sistema de iluminación LED de alta eficiencia. Incluye paneles solares y sistema de respaldo.",
-    },
-    {
-      id: 5,
-      servicio: "Instalación Eléctrica",
-      cliente: "Aceites del Norte S.A",
-      fecha: "15 Oct - 12 Oct",
-      precio: "$350",
-      estado: "Pendiente",
-      ubicacion: "Parque Industrial Santa Mónica, Calle 3",
-      direccion: "Av. Tecnológica #573 San Salvador",
-      telefono: "#503 1733-0932",
-      descripcion: "Instalación de sistema de iluminación LED de alta eficiencia. Incluye paneles solares y sistema de respaldo.",
-    },
-  ])
-
   // Contar citas por estado
   const citasActivas = citas.length
   const citasPendientes = citas.filter(c => c.estado === "Pendiente").length
   const citasIngresos = citas.reduce((sum, c) => {
-    const precio = parseInt(c.precio.replace(/[^0-9]/g, ""))
-    return sum + precio
+    // Manejar casos donde precio no sea string o no tenga formato válido
+    const precioStr = typeof c.precio === 'string' ? c.precio : String(c.precio || "")
+    const num = parseInt(precioStr.replace(/[^0-9]/g, ""))
+    return sum + (isNaN(num) ? 0 : num)
   }, 0)
 
   // Abrir modal de detalles
@@ -244,13 +220,15 @@ export default function ProximasCitas() {
   // Abrir modal de editar
   const handleOpenEdit = (cita) => {
     setFormData({
+      id: cita.id,
       nombre: cita.cliente,
       servicio: cita.servicio,
       descripcion: cita.descripcion,
-      inicio: cita.fecha,
-      fin: cita.fecha,
+      inicio: cita.dateStart || cita.fecha.split(' - ')[0],
+      fin: cita.dateEnd || cita.fecha.split(' - ')[1],
       telefono: cita.telefono,
       ubicacion: cita.ubicacion,
+      direccion: cita.direccion,
       estado: cita.estado,
       precioFinal: cita.precio,
     })
@@ -268,6 +246,37 @@ export default function ProximasCitas() {
   const handleCloseDetails = () => {
     setShowDetailsModal(false)
     setSelectedCita(null)
+  }
+
+  const handleSaveCita = async () => {
+    if (!formData.id) return // No support for create yet based on UI
+
+    try {
+      const payload = {
+        idCustomer: formData.nombre,
+        idService: formData.servicio,
+        dateStart: formData.inicio,
+        dateEnd: formData.fin,
+        clientPhone: formData.telefono,
+        clientLocation: formData.ubicacion,
+        clientDirection: formData.direccion || "",
+        finalPrice: formData.precioFinal,
+        status: formData.estado,
+        description: formData.descripcion,
+      }
+
+      await fetchApi(`/proyects/${formData.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+
+      handleCloseModal()
+      loadCitas()
+    } catch (error) {
+      console.error("Error al guardar cita:", error)
+      alert("Error al guardar: " + error.message)
+    }
   }
 
   // Filtrar citas por estado
@@ -503,64 +512,74 @@ export default function ProximasCitas() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {citasFiltradas.map((cita) => (
-                      <tr
-                        key={cita.id}
-                        className="hover:bg-white/[0.03] transition-colors duration-200"
-                      >
-                        <td className="px-6 py-5">
-                          <div>
-                            <p className="text-sm font-medium text-white/90">{cita.servicio}</p>
-                            <p className="text-xs text-white/50">{cita.cliente}</p>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5 text-sm text-white/60">{cita.fecha}</td>
-                        <td className="px-6 py-5 text-sm">
-                          <div>
-                            <p className="text-white/90">{cita.precio}</p>
-                            <span
-                              className="text-xs px-2 py-1 rounded-full inline-block mt-1"
-                              style={{
-                                background: cita.estado === "Pendiente" ? "rgba(239, 68, 68, 0.2)" : "rgba(34, 197, 94, 0.2)",
-                                color: cita.estado === "Pendiente" ? "#ef4444" : "#22c55e",
-                              }}
-                            >
-                              {cita.estado}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5 flex gap-2">
-                          <button
-                            onClick={() => handleOpenDetails(cita)}
-                            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15"
-                            style={{
-                              background: "rgba(255, 255, 255, 0.08)",
-                              border: "1px solid rgba(255, 255, 255, 0.1)",
-                            }}
-                            title="Ver detalles"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleOpenEdit(cita)}
-                            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15"
-                            style={{
-                              background: "rgba(255, 255, 255, 0.08)",
-                              border: "1px solid rgba(255, 255, 255, 0.1)",
-                            }}
-                            title="Editar cita"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                          </button>
-                        </td>
+                    {loading ? (
+                      <tr>
+                        <td colSpan="4" className="px-6 py-5 text-center text-white/50">Cargando citas...</td>
                       </tr>
-                    ))}
+                    ) : citasFiltradas.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="px-6 py-5 text-center text-white/50">No hay citas registradas</td>
+                      </tr>
+                    ) : (
+                      citasFiltradas.map((cita) => (
+                        <tr
+                          key={cita.id}
+                          className="hover:bg-white/[0.03] transition-colors duration-200"
+                        >
+                          <td className="px-6 py-5">
+                            <div>
+                              <p className="text-sm font-medium text-white/90">{cita.servicio}</p>
+                              <p className="text-xs text-white/50">{cita.cliente}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 text-sm text-white/60">{cita.fecha}</td>
+                          <td className="px-6 py-5 text-sm">
+                            <div>
+                              <p className="text-white/90">{cita.precio}</p>
+                              <span
+                                className="text-xs px-2 py-1 rounded-full inline-block mt-1"
+                                style={{
+                                  background: cita.estado === "Pendiente" ? "rgba(239, 68, 68, 0.2)" : "rgba(34, 197, 94, 0.2)",
+                                  color: cita.estado === "Pendiente" ? "#ef4444" : "#22c55e",
+                                }}
+                              >
+                                {cita.estado}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 flex gap-2">
+                            <button
+                              onClick={() => handleOpenDetails(cita)}
+                              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15"
+                              style={{
+                                background: "rgba(255, 255, 255, 0.08)",
+                                border: "1px solid rgba(255, 255, 255, 0.1)",
+                              }}
+                              title="Ver detalles"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleOpenEdit(cita)}
+                              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15"
+                              style={{
+                                background: "rgba(255, 255, 255, 0.08)",
+                                border: "1px solid rgba(255, 255, 255, 0.1)",
+                              }}
+                              title="Editar cita"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1068,6 +1087,7 @@ export default function ProximasCitas() {
                 Cancelar
               </button>
               <button
+                onClick={handleSaveCita}
                 className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02]"
                 style={{
                   background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",

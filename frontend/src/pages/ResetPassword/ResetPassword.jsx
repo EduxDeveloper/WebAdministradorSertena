@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom"
 // Componentes visuales
 import AnimatedBackground from "../../components/ui/AnimatedBackground"
 import LiquidGlassCard from "../../components/ui/LiquidGlassCard"
+// Hook de autenticacion para conectar con el backend
+import useAuth from "../../hooks/useAuth"
 
 // Pagina para restablecer la contraseña
 // El usuario llega aqui despues de verificar su codigo correctamente
@@ -20,9 +22,11 @@ export default function ResetPassword() {
   // Estado que indica si la contraseña se cambio con exito
   const [success, setSuccess] = useState(false)
   const navigate = useNavigate()
+  // Funcion para restablecer la contraseña que viene del contexto
+  const { resetPassword } = useAuth()
 
   // Funcion que se ejecuta al enviar el formulario
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     // Limpiamos errores anteriores
     setError("")
@@ -35,16 +39,26 @@ export default function ResetPassword() {
 
     setIsLoading(true)
 
-    // Simulamos el cambio de contraseña en el servidor
+    // Llamada REAL al backend para restablecer la contraseña
+    const result = await resetPassword({ 
+      newPassword: password, 
+      confirmNewPassword: confirmPassword 
+    })
+
+    setIsLoading(false)
+
+    if (!result.ok) {
+      // Si ocurre un error, mostramos el mensaje
+      setError(result.message)
+      return
+    }
+
+    // Mostramos el mensaje de exito
+    setSuccess(true)
+    // Despues de 2 segundos redirigimos al login
     setTimeout(() => {
-      setIsLoading(false)
-      // Mostramos el mensaje de exito
-      setSuccess(true)
-      // Despues de 2 segundos redirigimos al login
-      setTimeout(() => {
-        navigate("/login")
-      }, 2000)
-    }, 1800)
+      navigate("/login")
+    }, 2000)
   }
 
   return (

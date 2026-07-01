@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
+import useAuth from "../../hooks/useAuth"
 
 /**
  * Pagina del panel principal (Dashboard) - Coincide exactamente con el diseño de Sertena.
@@ -11,6 +12,87 @@ export default function Dashboard() {
   const [chartPeriod, setChartPeriod] = useState("Semana")
   const [hoveredBar, setHoveredBar] = useState(null)
   const [selectedBar, setSelectedBar] = useState(3) // El indice 3 corresponde al dia Jueves
+
+  const { fetchApi } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    ventasSemanales: 0,
+    reseniasPromedio: "0.0",
+    reseniasTotal: 0,
+    citasPendientes: 0,
+    proximasCitas: [],
+    serviciosPopulares: []
+  })
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [])
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true)
+      const [proyects, reviews] = await Promise.all([
+        fetchApi("/proyects").catch(() => []),
+        fetchApi("/reviews").catch(() => [])
+      ])
+
+      const citasPendientes = proyects.filter(p => p.status === "Pendiente").length
+
+      const ventasSemanales = proyects.reduce((sum, p) => {
+        const precioStr = typeof p.finalPrice === 'string' ? p.finalPrice : String(p.finalPrice || "")
+        const num = parseInt(precioStr.replace(/[^0-9]/g, ""))
+        return sum + (isNaN(num) ? 0 : num)
+      }, 0)
+
+      const reseniasTotal = reviews.length
+      const reseniasPromedio = reseniasTotal > 0 
+        ? (reviews.reduce((acc, r) => acc + (r.rating || 0), 0) / reseniasTotal).toFixed(1)
+        : "0.0"
+
+      const proximasCitas = proyects
+        .filter(p => p.status !== "Completado")
+        .slice(0, 5)
+        .map(p => ({
+          title: p.idService || "Servicio Programado",
+          address: p.clientLocation || "Ubicación no especificada"
+        }))
+
+      // Agrupar por idService para populares
+      const serviceCounts = {}
+      proyects.forEach(p => {
+        const name = p.idService || "Desconocido"
+        if (!serviceCounts[name]) {
+          serviceCounts[name] = { count: 0, revenue: 0 }
+        }
+        serviceCounts[name].count++
+        const precioStr = typeof p.finalPrice === 'string' ? p.finalPrice : String(p.finalPrice || "")
+        const num = parseInt(precioStr.replace(/[^0-9]/g, ""))
+        serviceCounts[name].revenue += isNaN(num) ? 0 : num
+      })
+
+      const serviciosPopulares = Object.keys(serviceCounts).map(name => ({
+        name,
+        category: "General",
+        frequency: serviceCounts[name].count,
+        trend: serviceCounts[name].count > 5 ? "up" : "down",
+        revenue: "$" + serviceCounts[name].revenue.toLocaleString()
+      })).sort((a, b) => b.frequency - a.frequency).slice(0, 4)
+
+      setStats({
+        ventasSemanales,
+        reseniasPromedio,
+        reseniasTotal,
+        citasPendientes,
+        proximasCitas,
+        serviciosPopulares
+      })
+
+    } catch (error) {
+      console.error("Error loading dashboard data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Datos para el grafico de barras
   const weeklyData = [
@@ -128,9 +210,9 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="text-white/40 text-[12px] font-semibold tracking-wider uppercase mb-1">
-                VENTAS SEMANALES
+                VENTAS TOTALES
               </div>
-              <div className="text-3xl font-bold tracking-tight text-white">$124,500.00</div>
+              <div className="text-3xl font-bold tracking-tight text-white">${stats.ventasSemanales.toLocaleString()}</div>
             </div>
           </div>
 
@@ -157,7 +239,7 @@ export default function Dashboard() {
                 </svg>
               </div>
               <span className="text-[12px] font-semibold text-blue-300 bg-blue-500/10 border border-blue-500/25 px-2.5 py-1 rounded-full">
-                4.8 promedio
+                {stats.reseniasPromedio} promedio
               </span>
             </div>
             <div>
@@ -165,7 +247,7 @@ export default function Dashboard() {
                 RESEÑAS NUEVAS
               </div>
               <div className="flex justify-between items-end">
-                <div className="text-3xl font-bold tracking-tight text-white">342</div>
+                <div className="text-3xl font-bold tracking-tight text-white">{stats.reseniasTotal}</div>
                 {/* Diseño de calificacion de 5 estrellas */}
                 <div className="flex gap-0.5 text-blue-400 mb-1">
                   {[...Array(5)].map((_, i) => (
@@ -211,8 +293,8 @@ export default function Dashboard() {
               <div className="text-white/40 text-[12px] font-semibold tracking-wider uppercase mb-1">
                 CITAS PENDIENTES
               </div>
-              <div className="text-3xl font-bold tracking-tight text-white mb-0.5">12</div>
-              <div className="text-[12px] text-white/30">Esta semana</div>
+              <div className="text-3xl font-bold tracking-tight text-white mb-0.5">{stats.citasPendientes}</div>
+              <div className="text-[12px] text-white/30">Total actual</div>
             </div>
           </div>
         </div>
@@ -339,20 +421,7 @@ export default function Dashboard() {
 
               {/* Listas de citas */}
               <div className="flex flex-col gap-4">
-                {[
-                  {
-                    title: "Mantenimiento Completo",
-                    address: "Zona Industrial Los Próceres, Nave 4-B, Calle Principal.",
-                  },
-                  {
-                    title: "Mantenimiento Completo",
-                    address: "Parque Logístico Norte, Kilómetro 12.5, Bodega #82.",
-                  },
-                  {
-                    title: "Mantenimiento Completo",
-                    address: "Complejo Fabril San José, Avenida Las Industrias, Edificio C.",
-                  },
-                ].map((cita, i) => (
+                {stats.proximasCitas.length > 0 ? stats.proximasCitas.map((cita, i) => (
                   <div
                     key={i}
                     className="flex gap-4 p-3 rounded-xl hover:bg-white/5 transition-all duration-300"
@@ -382,7 +451,9 @@ export default function Dashboard() {
                       <p className="text-[11px] text-white/35 leading-normal">{cita.address}</p>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-sm text-white/50 text-center py-4">No hay próximas citas</p>
+                )}
               </div>
             </div>
           </div>
@@ -413,7 +484,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-sm">
-                {purchasedServices.map((service, index) => (
+                {stats.serviciosPopulares.length > 0 ? stats.serviciosPopulares.map((service, index) => (
                   <tr key={index} className="hover:bg-white/[0.02] transition-colors duration-200">
                     <td className="py-4 font-medium text-white/90">{service.name}</td>
                     <td className="py-4">
@@ -441,7 +512,11 @@ export default function Dashboard() {
                     </td>
                     <td className="py-4 text-right font-bold text-white/95">{service.revenue}</td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan="5" className="py-4 text-center text-white/50">No hay servicios registrados</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom"
 // Importamos el fondo animado y la tarjeta de cristal
 import AnimatedBackground from "../../components/ui/AnimatedBackground"
 import LiquidGlassCard from "../../components/ui/LiquidGlassCard"
+// Hook de autenticacion para conectar con el backend
+import useAuth from "../../hooks/useAuth"
 
 // Pagina de recuperacion de contraseña
 // Aqui el usuario ingresa su correo para que le enviemos un codigo de verificacion
@@ -13,23 +15,35 @@ export default function RecoveryEmail() {
   const [email, setEmail] = useState("")
   // Estado para saber si estamos esperando la respuesta del servidor
   const [isLoading, setIsLoading] = useState(false)
+  // Estado para mostrar mensajes de error
+  const [error, setError] = useState("")
   // Hook para navegar a otras paginas
   const navigate = useNavigate()
+  // Funcion para solicitar codigo de recuperacion que viene del contexto
+  const { requestRecoveryCode } = useAuth()
 
   // Funcion que se ejecuta al enviar el formulario
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     // Prevenimos que la pagina se recargue
     e.preventDefault()
+    // Limpiamos errores anteriores
+    setError("")
     // Activamos el estado de carga
     setIsLoading(true)
 
-    // Simulamos el envio del codigo por correo
-    // Aqui iria la llamada real al backend
-    // Despues de 1.5 segundos navegamos a la pantalla de verificacion
-    setTimeout(() => {
-      setIsLoading(false)
-      navigate("/verify-code")
-    }, 1500)
+    // Llamada REAL al backend: solicita que se envie el codigo OTP al correo
+    const result = await requestRecoveryCode({ email })
+
+    setIsLoading(false)
+
+    if (!result.ok) {
+      // Si el correo no existe en la BD o hay error, mostramos el mensaje
+      setError(result.message)
+      return
+    }
+
+    // Si se envio exitosamente, navegamos a la pantalla de verificacion
+    navigate("/verify-code")
   }
 
   return (
@@ -78,6 +92,24 @@ export default function RecoveryEmail() {
               Ingrese su correo electronico y le enviaremos un codigo para recuperar su cuenta
             </p>
           </div>
+
+          {/* Mensaje de error si el correo no existe en la base de datos */}
+          {error && (
+            <div
+              style={{
+                padding: '10px 14px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: '10px',
+                color: '#fca5a5',
+                fontSize: '13px',
+                marginBottom: '20px',
+                textAlign: 'center',
+              }}
+            >
+              {error}
+            </div>
+          )}
 
           {/* Formulario con el campo de correo */}
           <form onSubmit={handleSubmit}>

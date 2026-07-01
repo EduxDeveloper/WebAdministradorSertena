@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
+import useAuth from "../../hooks/useAuth"
 
 /**
  * Pagina del Catalogo de Clientes - Muestra una tabla con la informacion de los clientes
@@ -8,70 +9,70 @@ import Sidebar from "../../components/ui/Sidebar"
  */
 export default function Clientes() {
   const [showModal, setShowModal] = useState(false)
+  const [clientes, setClientes] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { fetchApi } = useAuth()
 
   // Estado del formulario del modal para agregar un nuevo cliente
   const [formData, setFormData] = useState({
     nombre: "",
-    correo: "",
-    contrasena: "",
-    tipo: "",
-    verificado: true,
+    email: "",
+    contraseña: "",
+    tipo: "persona",
+    isVerified: true,
   })
 
-  // Datos quemados de clientes para la tabla
-  const [clientes] = useState([
-    {
-      id: 1,
-      nombre: "Carlos Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      contrasena: "**************",
-      tipo: "**************",
-    },
-    {
-      id: 2,
-      nombre: "Carlos Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      contrasena: "**************",
-      tipo: "**************",
-    },
-    {
-      id: 3,
-      nombre: "Carlos Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      contrasena: "**************",
-      tipo: "**************",
-    },
-    {
-      id: 4,
-      nombre: "Carlos Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      contrasena: "**************",
-      tipo: "**************",
-    },
-    {
-      id: 5,
-      nombre: "Carlos Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      contrasena: "**************",
-      tipo: "**************",
-    },
-    {
-      id: 6,
-      nombre: "Carlos Galdamez",
-      correo: "c.mendoza@autoparts.com",
-      contrasena: "**************",
-      tipo: "**************",
-    },
-  ])
+  // Cargar clientes al montar el componente
+  useEffect(() => {
+    loadClientes()
+  }, [])
+
+  const loadClientes = async () => {
+    try {
+      setLoading(true)
+      const data = await fetchApi("/clientes/obtener")
+      setClientes(data || [])
+    } catch (error) {
+      console.error("Error al cargar clientes:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Guardar un nuevo cliente
+  const handleSaveCliente = async () => {
+    try {
+      await fetchApi("/clientes/crear", {
+        method: "POST",
+        body: JSON.stringify(formData),
+      })
+      handleCloseModal()
+      loadClientes() // Recargar la tabla
+    } catch (error) {
+      console.error("Error al crear cliente:", error)
+      alert("Hubo un error al crear el cliente: " + error.message)
+    }
+  }
+
+  // Eliminar un cliente
+  const handleDeleteCliente = async (id) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este cliente?")) return
+    try {
+      await fetchApi(`/clientes/eliminar/${id}`, { method: "DELETE" })
+      loadClientes()
+    } catch (error) {
+      console.error("Error al eliminar:", error)
+    }
+  }
 
   // Resetear el formulario a sus valores iniciales
   const resetForm = () => {
     setFormData({
       nombre: "",
-      correo: "",
-      contrasena: "",
-      tipo: "",
-      verificado: true,
+      email: "",
+      contraseña: "",
+      tipo: "persona",
+      isVerified: true,
     })
   }
 
@@ -143,31 +144,45 @@ export default function Clientes() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {clientes.map((cliente) => (
-                  <tr
-                    key={cliente.id}
-                    className="hover:bg-white/[0.03] transition-colors duration-200"
-                  >
-                    <td className="px-6 py-5 text-sm font-medium text-white/90">{cliente.nombre}</td>
-                    <td className="px-6 py-5 text-sm text-white/60">{cliente.correo}</td>
-                    <td className="px-6 py-5 text-sm text-white/50 tracking-wider">{cliente.contrasena}</td>
-                    <td className="px-6 py-5 text-sm text-white/50 tracking-wider">{cliente.tipo}</td>
-                    <td className="px-6 py-5 text-right">
-                      <button
-                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer ml-auto"
-                        style={{
-                          background: "rgba(255, 255, 255, 0.08)",
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
-                        }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
-                      </button>
-                    </td>
+                {loading ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-5 text-center text-white/50">Cargando clientes...</td>
                   </tr>
-                ))}
+                ) : clientes.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-5 text-center text-white/50">No hay clientes registrados</td>
+                  </tr>
+                ) : (
+                  clientes.map((cliente) => (
+                    <tr
+                      key={cliente._id}
+                      className="hover:bg-white/[0.03] transition-colors duration-200"
+                    >
+                      <td className="px-6 py-5 text-sm font-medium text-white/90">{cliente.nombre}</td>
+                      <td className="px-6 py-5 text-sm text-white/60">{cliente.email}</td>
+                      <td className="px-6 py-5 text-sm text-white/50 tracking-wider">********</td>
+                      <td className="px-6 py-5 text-sm text-white/50 tracking-wider">{cliente.tipo}</td>
+                      <td className="px-6 py-5 text-right">
+                        <button
+                          onClick={() => handleDeleteCliente(cliente._id)}
+                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer ml-auto"
+                          style={{
+                            background: "rgba(239, 68, 68, 0.15)",
+                            border: "1px solid rgba(239, 68, 68, 0.3)",
+                          }}
+                          title="Eliminar"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -231,8 +246,8 @@ export default function Clientes() {
               <label className="block text-sm font-semibold text-gray-800 mb-2">Correo</label>
               <input
                 type="email"
-                value={formData.correo}
-                onChange={(e) => setFormData(prev => ({ ...prev, correo: e.target.value }))}
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                 style={{
                   background: "rgba(255,255,255,0.5)",
@@ -247,8 +262,8 @@ export default function Clientes() {
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Contraseña</label>
                 <input
                   type="password"
-                  value={formData.contrasena}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contrasena: e.target.value }))}
+                  value={formData.contraseña}
+                  onChange={(e) => setFormData(prev => ({ ...prev, contraseña: e.target.value }))}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
@@ -279,10 +294,10 @@ export default function Clientes() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setFormData(prev => ({ ...prev, verificado: !prev.verificado }))}
+                  onClick={() => setFormData(prev => ({ ...prev, isVerified: !prev.isVerified }))}
                   className="relative w-14 h-7 rounded-full transition-all duration-300 cursor-pointer"
                   style={{
-                    background: formData.verificado
+                    background: formData.isVerified
                       ? "linear-gradient(135deg, #10b981, #34d399)"
                       : "rgba(0,0,0,0.2)",
                   }}
@@ -290,12 +305,12 @@ export default function Clientes() {
                   <div
                     className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300"
                     style={{
-                      left: formData.verificado ? "calc(100% - 26px)" : "2px",
+                      left: formData.isVerified ? "calc(100% - 26px)" : "2px",
                     }}
                   />
                 </button>
-                <span className={`text-sm font-medium ${formData.verificado ? "text-emerald-600" : "text-gray-500"}`}>
-                  {formData.verificado ? "Verificado" : "No verificado"}
+                <span className={`text-sm font-medium ${formData.isVerified ? "text-emerald-600" : "text-gray-500"}`}>
+                  {formData.isVerified ? "Verificado" : "No verificado"}
                 </span>
               </div>
             </div>
@@ -316,6 +331,7 @@ export default function Clientes() {
                 Cancelar
               </button>
               <button
+                onClick={handleSaveCliente}
                 className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer"
                 style={{
                   background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",

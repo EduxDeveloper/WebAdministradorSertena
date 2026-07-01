@@ -8,6 +8,8 @@ import AnimatedBackground from "../../components/ui/AnimatedBackground"
 import LiquidGlassCard from "../../components/ui/LiquidGlassCard"
 // Importamos el logo de Sertena que se muestra arriba del formulario
 import logoSertena from "../../assets/Logo.png"
+// Hook de autenticacion para conectar con el backend
+import useAuth from "../../hooks/useAuth"
 
 // Pagina de inicio de sesion
 // Es la primera pantalla que ve el usuario al entrar a la aplicacion
@@ -18,24 +20,35 @@ export default function Login() {
   const [password, setPassword] = useState("")
   // Estado para saber si estamos esperando la respuesta del servidor
   const [isLoading, setIsLoading] = useState(false)
+  // Estado para mostrar mensajes de error al usuario
+  const [error, setError] = useState("")
   // Hook para navegar a otras paginas
   const navigate = useNavigate()
+  // Funcion login que viene del contexto de autenticacion
+  const { login } = useAuth()
 
   // Funcion que se ejecuta cuando el usuario envia el formulario
   const handleSubmit = async (e) => {
     // Evitamos que la pagina se recargue al enviar el formulario
     e.preventDefault()
+    // Limpiamos errores anteriores
+    setError("")
     // Activamos el estado de carga para mostrar "Ingresando..." en el boton
     setIsLoading(true)
 
-    // Simulamos una peticion al servidor con un retraso de 1.5 segundos
-    // Aqui es donde iria la llamada real al backend para verificar credenciales
-    setTimeout(() => {
-      setIsLoading(false)
-      console.log("Login attempt:", { email, password })
-      // Si todo sale bien, mandamos al usuario al dashboard
-      navigate("/dashboard")
-    }, 1500)
+    // Llamada REAL al backend via el contexto de autenticacion
+    const result = await login({ email, password })
+
+    setIsLoading(false)
+
+    if (!result.ok) {
+      // Si el login falla, mostramos el mensaje de error del backend
+      setError(result.message)
+      return
+    }
+
+    // Si todo sale bien, mandamos al usuario al dashboard
+    navigate("/dashboard")
   }
 
   return (
@@ -73,6 +86,24 @@ export default function Login() {
               }}
             />
           </div>
+
+          {/* Mensaje de error si el login falla (credenciales incorrectas) */}
+          {error && (
+            <div
+              style={{
+                padding: '10px 14px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: '10px',
+                color: '#fca5a5',
+                fontSize: '13px',
+                marginBottom: '20px',
+                textAlign: 'center',
+              }}
+            >
+              {error}
+            </div>
+          )}
 
           {/* Formulario de inicio de sesion */}
           <form onSubmit={handleSubmit}>

@@ -1,41 +1,48 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
+import useAuth from "../../hooks/useAuth"
 
 /**
  * Pagina de Gestión de Reseñas - Muestra las reseñas de clientes sobre servicios
  * con rating, comentarios y estadísticas. Permite eliminar reseñas.
  */
 export default function Resenias() {
-  // Datos quemados de reseñas
-  const [resenias] = useState([
-    {
-      id: 1,
-      cliente: "Industria S.A",
-      rating: 5,
-      comentarios: "Excelente ejecución, Los tiempos se cumplieron y sobre todo excelente precio.",
-    },
-    {
-      id: 2,
-      cliente: "Industria S.A",
-      rating: 5,
-      comentarios: "Excelente ejecución, Los tiempos se cumplieron y sobre todo excelente precio.",
-    },
-    {
-      id: 3,
-      cliente: "Industria S.A",
-      rating: 5,
-      comentarios: "Excelente ejecución, Los tiempos se cumplieron y sobre todo excelente precio.",
-    },
-    {
-      id: 4,
-      cliente: "Industria S.A",
-      rating: 5,
-      comentarios: "Excelente ejecución, Los tiempos se cumplieron y sobre todo excelente precio.",
-    },
-  ])
+  const [resenias, setResenias] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { fetchApi } = useAuth()
+
+  // Cargar reseñas al montar
+  useEffect(() => {
+    loadResenias()
+  }, [])
+
+  const loadResenias = async () => {
+    try {
+      setLoading(true)
+      const data = await fetchApi("/reviews")
+      setResenias(data || [])
+    } catch (error) {
+      console.error("Error al cargar reseñas:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteResenia = async (id) => {
+    if (!window.confirm("¿Seguro que deseas eliminar esta reseña?")) return
+    try {
+      await fetchApi(`/reviews/${id}`, { method: "DELETE" })
+      loadResenias()
+    } catch (error) {
+      console.error("Error al eliminar:", error)
+    }
+  }
 
   // Calcular el rating promedio
-  const ratingPromedio = (resenias.reduce((acc, r) => acc + r.rating, 0) / resenias.length).toFixed(1)
+  // Calcular el rating promedio
+  const ratingPromedio = resenias.length > 0 
+    ? (resenias.reduce((acc, r) => acc + (r.rating || 0), 0) / resenias.length).toFixed(1)
+    : "0.0"
 
   // Contar reseñas por estrellas
   const reseniasTotales = resenias.length
@@ -194,37 +201,48 @@ export default function Resenias() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {resenias.map((resenia) => (
-                  <tr
-                    key={resenia.id}
-                    className="hover:bg-white/[0.03] transition-colors duration-200"
-                  >
-                    <td className="px-6 py-5 text-sm font-medium text-white/90">{resenia.cliente}</td>
-                    <td className="px-6 py-5 text-sm">
-                      {renderStars(resenia.rating)}
-                    </td>
-                    <td className="px-6 py-5 text-sm text-white/60">
-                      {resenia.comentarios}
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <button
-                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-red-500/20 cursor-pointer ml-auto"
-                        style={{
-                          background: "rgba(255, 255, 255, 0.08)",
-                          border: "1px solid rgba(255, 255, 255, 0.1)",
-                        }}
-                        title="Eliminar reseña"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          <line x1="10" y1="11" x2="10" y2="17" />
-                          <line x1="14" y1="11" x2="14" y2="17" />
-                        </svg>
-                      </button>
-                    </td>
+                {loading ? (
+                  <tr>
+                    <td colSpan="4" className="px-6 py-5 text-center text-white/50">Cargando reseñas...</td>
                   </tr>
-                ))}
+                ) : resenias.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="px-6 py-5 text-center text-white/50">No hay reseñas registradas</td>
+                  </tr>
+                ) : (
+                  resenias.map((resenia) => (
+                    <tr
+                      key={resenia._id}
+                      className="hover:bg-white/[0.03] transition-colors duration-200"
+                    >
+                      <td className="px-6 py-5 text-sm font-medium text-white/90">{resenia.idCustomer || "Cliente Anónimo"}</td>
+                      <td className="px-6 py-5 text-sm">
+                        {renderStars(resenia.rating)}
+                      </td>
+                      <td className="px-6 py-5 text-sm text-white/60">
+                        {resenia.comment}
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <button
+                          onClick={() => handleDeleteResenia(resenia._id)}
+                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-red-500/20 cursor-pointer ml-auto"
+                          style={{
+                            background: "rgba(255, 255, 255, 0.08)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                          }}
+                          title="Eliminar reseña"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import logoSertena from "../../assets/Logo.png"
+import useAuth from "../../hooks/useAuth"
 
 /**
  * Componente reutilizable de la barra lateral de navegacion.
@@ -8,6 +9,7 @@ import logoSertena from "../../assets/Logo.png"
  */
 export default function Sidebar({ activeTab = "Inicio" }) {
   const navigate = useNavigate()
+  const { logout } = useAuth()
 
   // Menu de navegacion de la barra lateral
   const menuItems = [
@@ -81,8 +83,9 @@ export default function Sidebar({ activeTab = "Inicio" }) {
     }
   }
 
-  // Cerrar sesion y redirigir al login
-  const handleLogout = () => {
+  // Cerrar sesion de forma real en el backend y luego redirigir al login
+  const handleLogout = async () => {
+    await logout()
     navigate("/login")
   }
 

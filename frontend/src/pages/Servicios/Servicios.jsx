@@ -1,6 +1,6 @@
-import { useState, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import Sidebar from "../../components/ui/Sidebar"
-import hvacImage from "../../assets/hvac_service.png"
+import useAuth from "../../hooks/useAuth"
 
 /**
  * Pagina del Catalogo de Servicios - Muestra tarjetas de servicios con imagen,
@@ -10,44 +10,37 @@ export default function Servicios() {
   const [showModal, setShowModal] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef(null)
+  
+  const [servicios, setServicios] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { fetchApi } = useAuth()
 
   // Estado del formulario del modal
   const [formData, setFormData] = useState({
-    nombre: "",
-    tarifaBase: "",
-    descripcion: "",
-    imagen: null,
+    nameService: "",
+    price: "",
+    description: "",
+    image: null,
     imagenPreview: null,
     activo: true,
   })
 
-  // Datos quemados de servicios
-  const [servicios] = useState([
-    {
-      id: 1,
-      nombre: "Mantenimiento Preventivo HVAC",
-      descripcion: "Revisión exhaustiva de sistemas de ventilación industrial y limpieza profunda...",
-      tarifaBase: 450,
-      imagen: hvacImage,
-      activo: true,
-    },
-    {
-      id: 2,
-      nombre: "Mantenimiento Preventivo HVAC",
-      descripcion: "Revisión exhaustiva de sistemas de ventilación industrial y limpieza profunda...",
-      tarifaBase: 450,
-      imagen: hvacImage,
-      activo: true,
-    },
-    {
-      id: 3,
-      nombre: "Mantenimiento Preventivo HVAC",
-      descripcion: "Revisión exhaustiva de sistemas de ventilación industrial y limpieza profunda...",
-      tarifaBase: 450,
-      imagen: hvacImage,
-      activo: true,
-    },
-  ])
+  // Cargar servicios al montar
+  useEffect(() => {
+    loadServicios()
+  }, [])
+
+  const loadServicios = async () => {
+    try {
+      setLoading(true)
+      const data = await fetchApi("/services")
+      setServicios(data || [])
+    } catch (error) {
+      console.error("Error al cargar servicios:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Manejo de drag and drop para la imagen
   const handleDrag = (e) => {
@@ -73,7 +66,7 @@ export default function Servicios() {
     if (file && (file.type === "image/png" || file.type === "image/jpeg")) {
       const reader = new FileReader()
       reader.onload = (e) => {
-        setFormData(prev => ({ ...prev, imagen: file, imagenPreview: e.target.result }))
+        setFormData(prev => ({ ...prev, image: file, imagenPreview: e.target.result }))
       }
       reader.readAsDataURL(file)
     }
@@ -86,12 +79,48 @@ export default function Servicios() {
   }
 
   const resetForm = () => {
-    setFormData({ nombre: "", tarifaBase: "", descripcion: "", imagen: null, imagenPreview: null, activo: true })
+    setFormData({ nameService: "", price: "", description: "", image: null, imagenPreview: null, activo: true })
   }
 
   const handleCloseModal = () => {
     setShowModal(false)
     resetForm()
+  }
+
+  const handleSaveServicio = async () => {
+    if (!formData.image) {
+      alert("Por favor selecciona una imagen para el servicio.")
+      return
+    }
+
+    try {
+      const form = new FormData()
+      form.append("nameService", formData.nameService)
+      form.append("price", formData.price)
+      form.append("description", formData.description)
+      form.append("image", formData.image)
+
+      await fetchApi("/services", {
+        method: "POST",
+        body: form, // FetchApi no pone content-type al detectar FormData
+      })
+
+      handleCloseModal()
+      loadServicios()
+    } catch (error) {
+      console.error("Error al guardar servicio:", error)
+      alert("Error al guardar: " + error.message)
+    }
+  }
+
+  const handleDeleteServicio = async (id) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este servicio?")) return
+    try {
+      await fetchApi(`/services/${id}`, { method: "DELETE" })
+      loadServicios()
+    } catch (error) {
+      console.error("Error al eliminar servicio:", error)
+    }
   }
 
   return (
@@ -136,64 +165,74 @@ export default function Servicios() {
 
         {/* Grid de tarjetas de servicios */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full">
-          {servicios.map((servicio) => (
-            <div
-              key={servicio.id}
-              className="rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl group"
-              style={{
-                background: "rgba(255, 255, 255, 0.04)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              }}
-            >
-              {/* Imagen del servicio */}
-              <div className="w-full h-[200px] overflow-hidden relative">
-                <img
-                  src={servicio.imagen}
-                  alt={servicio.nombre}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.6) 100%)",
-                  }}
-                />
-              </div>
-
-              {/* Info del servicio */}
-              <div className="p-5">
-                <h3 className="text-base font-bold text-white mb-1.5">{servicio.nombre}</h3>
-                <p className="text-[13px] text-white/40 leading-relaxed mb-4">
-                  {servicio.descripcion}
-                </p>
-
-                {/* Separador */}
-                <div className="border-t border-white/10 mb-4" />
-
-                {/* Tarifa y boton editar */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-[12px] text-white/40 font-medium">Tarifa Base</div>
-                    <div className="text-emerald-400 font-bold text-base">${servicio.tarifaBase}</div>
-                  </div>
-                  <button
-                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
+          {loading ? (
+            <div className="col-span-full text-center text-white/50">Cargando servicios...</div>
+          ) : servicios.length === 0 ? (
+            <div className="col-span-full text-center text-white/50">No hay servicios registrados</div>
+          ) : (
+            servicios.map((servicio) => (
+              <div
+                key={servicio._id}
+                className="rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl group flex flex-col"
+                style={{
+                  background: "rgba(255, 255, 255, 0.04)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                }}
+              >
+                {/* Imagen del servicio */}
+                <div className="w-full h-[200px] overflow-hidden relative shrink-0">
+                  <img
+                    src={servicio.imgUrl}
+                    alt={servicio.nameService}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div
+                    className="absolute inset-0"
                     style={{
-                      background: "rgba(255, 255, 255, 0.08)",
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.6) 100%)",
                     }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                    </svg>
-                  </button>
+                  />
+                </div>
+
+                {/* Info del servicio */}
+                <div className="p-5 flex-1 flex flex-col">
+                  <h3 className="text-base font-bold text-white mb-1.5">{servicio.nameService}</h3>
+                  <p className="text-[13px] text-white/40 leading-relaxed mb-4 flex-1">
+                    {servicio.description}
+                  </p>
+
+                  {/* Separador */}
+                  <div className="border-t border-white/10 mb-4" />
+
+                  {/* Tarifa y boton editar/eliminar */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-[12px] text-white/40 font-medium">Tarifa Base</div>
+                      <div className="text-emerald-400 font-bold text-base">${servicio.price}</div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteServicio(servicio._id)}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
+                      style={{
+                        background: "rgba(239, 68, 68, 0.15)",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                      }}
+                      title="Eliminar"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </main>
 
@@ -243,8 +282,8 @@ export default function Servicios() {
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Nombre</label>
                 <input
                   type="text"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                  value={formData.nameService}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nameService: e.target.value }))}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
@@ -256,8 +295,8 @@ export default function Servicios() {
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Tarifa Base</label>
                 <input
                   type="number"
-                  value={formData.tarifaBase}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tarifaBase: e.target.value }))}
+                  value={formData.price}
+                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
@@ -272,8 +311,8 @@ export default function Servicios() {
               <label className="block text-sm font-semibold text-gray-800 mb-2">Descripción</label>
               <textarea
                 rows={4}
-                value={formData.descripcion}
-                onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 className="w-full px-4 py-3 rounded-lg text-sm text-gray-900 outline-none resize-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                 style={{
                   background: "rgba(255,255,255,0.5)",
@@ -370,6 +409,7 @@ export default function Servicios() {
                 Cancelar
               </button>
               <button
+                onClick={handleSaveServicio}
                 className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer"
                 style={{
                   background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
