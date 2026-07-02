@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom"
 import logoSertena from "../../assets/Logo.png"
 import useAuth from "../../hooks/useAuth"
+import Swal from "sweetalert2"
 
 /**
  * Componente reutilizable de la barra lateral de navegacion.
@@ -84,9 +85,24 @@ export default function Sidebar({ activeTab = "Inicio" }) {
   }
 
   // Cerrar sesion de forma real en el backend y luego redirigir al login
-  const handleLogout = async () => {
-    await logout()
-    navigate("/login")
+  const handleLogout = () => {
+    Swal.fire({
+      title: "¿Seguro que quieres cerrar sesión?",
+      text: "Tendrás que volver a iniciar sesión para acceder al panel",
+      icon: "warning",
+      showCancelButton: true,
+      background: "#001a1a",
+      color: "#fff",
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#374151",
+      confirmButtonText: "Sí, cerrar sesión",
+      cancelButtonText: "Cancelar"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        await logout()
+        navigate("/login")
+      }
+    })
   }
 
   return (

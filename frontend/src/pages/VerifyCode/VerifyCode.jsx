@@ -57,6 +57,10 @@ export default function VerifyCode() {
     navigate("/reset-password")
   }
 
+  const handleResend = () => {
+    navigate("/recovery-email")
+  }
+
   // Maneja cuando el usuario escribe en un campo de caracter
   const handleChange = (index, value) => {
     // Solo permitimos caracteres hexadecimales (numeros 0-9 y letras a-f)
@@ -155,7 +159,7 @@ export default function VerifyCode() {
                 margin: "0 auto",
               }}
             >
-              Ingrese el codigo que leenviams a su correo, el codigo podria tardar en llegar de 2 a 3 minutos.
+              Ingrese el codigo que le enviamos a su correo, el codigo podria tardar en llegar de 2 a 3 minutos.
             </p>
           </div>
 
@@ -196,16 +200,17 @@ export default function VerifyCode() {
                   marginBottom: "16px",
                 }}
               >
-                Ingrese el codigo de 5 digitos:
+                Ingrese el codigo de 6 digitos:
               </label>
 
-              {/* Fila de 5 cuadros para los digitos */}
+              {/* Fila de 6 cuadros para los digitos */}
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  gap: "12px",
-                  maxWidth: "360px",
+                  gap: "8px",
+                  width: "100%",
+                  maxWidth: "420px",
                   margin: "0 auto",
                 }}
               >

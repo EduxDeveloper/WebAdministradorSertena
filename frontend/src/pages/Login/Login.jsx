@@ -10,6 +10,7 @@ import LiquidGlassCard from "../../components/ui/LiquidGlassCard"
 import logoSertena from "../../assets/Logo.png"
 // Hook de autenticacion para conectar con el backend
 import useAuth from "../../hooks/useAuth"
+import Swal from "sweetalert2"
 
 // Pagina de inicio de sesion
 // Es la primera pantalla que ve el usuario al entrar a la aplicacion
@@ -20,8 +21,6 @@ export default function Login() {
   const [password, setPassword] = useState("")
   // Estado para saber si estamos esperando la respuesta del servidor
   const [isLoading, setIsLoading] = useState(false)
-  // Estado para mostrar mensajes de error al usuario
-  const [error, setError] = useState("")
   // Hook para navegar a otras paginas
   const navigate = useNavigate()
   // Funcion login que viene del contexto de autenticacion
@@ -31,8 +30,6 @@ export default function Login() {
   const handleSubmit = async (e) => {
     // Evitamos que la pagina se recargue al enviar el formulario
     e.preventDefault()
-    // Limpiamos errores anteriores
-    setError("")
     // Activamos el estado de carga para mostrar "Ingresando..." en el boton
     setIsLoading(true)
 
@@ -42,13 +39,31 @@ export default function Login() {
     setIsLoading(false)
 
     if (!result.ok) {
-      // Si el login falla, mostramos el mensaje de error del backend
-      setError(result.message)
+      // Si el login falla, mostramos SWAL
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: result.message || "Credenciales incorrectas o error en el servidor",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9",
+      })
       return
     }
 
-    // Si todo sale bien, mandamos al usuario al dashboard
-    navigate("/dashboard")
+    // Si todo sale bien, mostramos exito y mandamos al usuario al dashboard
+    Swal.fire({
+      icon: "success",
+      title: "Bienvenido",
+      text: result.message || "Sesión iniciada exitosamente",
+      background: "#001a1a",
+      color: "#fff",
+      confirmButtonColor: "#00E9E9",
+      timer: 2000,
+      showConfirmButton: false
+    }).then(() => {
+      navigate("/dashboard")
+    })
   }
 
   return (
@@ -86,24 +101,6 @@ export default function Login() {
               }}
             />
           </div>
-
-          {/* Mensaje de error si el login falla (credenciales incorrectas) */}
-          {error && (
-            <div
-              style={{
-                padding: '10px 14px',
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid rgba(239, 68, 68, 0.4)',
-                borderRadius: '10px',
-                color: '#fca5a5',
-                fontSize: '13px',
-                marginBottom: '20px',
-                textAlign: 'center',
-              }}
-            >
-              {error}
-            </div>
-          )}
 
           {/* Formulario de inicio de sesion */}
           <form onSubmit={handleSubmit}>
