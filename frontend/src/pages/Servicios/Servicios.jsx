@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
+import Swal from "sweetalert2"
 
 /**
  * Pagina del Catalogo de Servicios - Muestra tarjetas de servicios con imagen,
@@ -9,6 +10,7 @@ import useAuth from "../../hooks/useAuth"
 export default function Servicios() {
   const [showModal, setShowModal] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const fileInputRef = useRef(null)
   
   const [servicios, setServicios] = useState([])
@@ -80,6 +82,7 @@ export default function Servicios() {
 
   const resetForm = () => {
     setFormData({ nameService: "", price: "", description: "", image: null, imagenPreview: null, activo: true })
+    setEditingId(null)
   }
 
   const handleCloseModal = () => {
@@ -87,9 +90,41 @@ export default function Servicios() {
     resetForm()
   }
 
+  const handleEditServicio = (servicio) => {
+    setFormData({
+      nameService: servicio.nameService || "",
+      price: servicio.price || "",
+      description: servicio.description || "",
+      image: servicio.imgUrl, // keep url as indicator it has an image
+      imagenPreview: servicio.imgUrl,
+      activo: servicio.status !== undefined ? servicio.status : true,
+    })
+    setEditingId(servicio._id)
+    setShowModal(true)
+  }
+
   const handleSaveServicio = async () => {
-    if (!formData.image) {
-      alert("Por favor selecciona una imagen para el servicio.")
+    if (!formData.nameService || !formData.price || !formData.description) {
+      Swal.fire({
+        title: "Campos Incompletos",
+        text: "Por favor llena todos los campos (Nombre, Tarifa, Descripción).",
+        icon: "warning",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9"
+      })
+      return
+    }
+
+    if (!formData.image && !editingId) {
+      Swal.fire({
+        title: "Imagen Requerida",
+        text: "Por favor selecciona una imagen para el servicio.",
+        icon: "warning",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9"
+      })
       return
     }
 
@@ -98,28 +133,85 @@ export default function Servicios() {
       form.append("nameService", formData.nameService)
       form.append("price", formData.price)
       form.append("description", formData.description)
-      form.append("image", formData.image)
+      form.append("status", formData.activo)
+      // Solo hacer append de la imagen si es un archivo nuevo (objeto File)
+      if (formData.image instanceof File) {
+        form.append("image", formData.image)
+      }
 
-      await fetchApi("/services", {
-        method: "POST",
-        body: form, // FetchApi no pone content-type al detectar FormData
+      if (editingId) {
+        await fetchApi(`/services/${editingId}`, {
+          method: "PUT",
+          body: form,
+        })
+      } else {
+        await fetchApi("/services", {
+          method: "POST",
+          body: form,
+        })
+      }
+
+      Swal.fire({
+        title: "¡Éxito!",
+        text: editingId ? "Servicio actualizado correctamente" : "Servicio creado correctamente",
+        icon: "success",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9"
       })
 
       handleCloseModal()
       loadServicios()
     } catch (error) {
       console.error("Error al guardar servicio:", error)
-      alert("Error al guardar: " + error.message)
+      Swal.fire({
+        title: "Error",
+        text: "Error al guardar: " + error.message,
+        icon: "error",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9"
+      })
     }
   }
 
   const handleDeleteServicio = async (id) => {
-    if (!window.confirm("¿Seguro que deseas eliminar este servicio?")) return
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: "No podrás revertir esto",
+      icon: 'warning',
+      background: "#001a1a",
+      color: "#fff",
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#00E9E9',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+
+    if (!result.isConfirmed) return
+
     try {
       await fetchApi(`/services/${id}`, { method: "DELETE" })
+      Swal.fire({
+        title: '¡Eliminado!',
+        text: 'El servicio ha sido eliminado.',
+        icon: 'success',
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: '#00E9E9'
+      })
       loadServicios()
     } catch (error) {
       console.error("Error al eliminar servicio:", error)
+      Swal.fire({
+        title: "Error",
+        text: "Error al eliminar: " + error.message,
+        icon: "error",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9"
+      })
     }
   }
 
@@ -197,8 +289,20 @@ export default function Servicios() {
                 </div>
 
                 {/* Info del servicio */}
-                <div className="p-5 flex-1 flex flex-col">
-                  <h3 className="text-base font-bold text-white mb-1.5">{servicio.nameService}</h3>
+                <div className="p-5 flex-1 flex flex-col relative">
+                  <div className="flex justify-between items-start mb-1.5">
+                    <h3 className="text-base font-bold text-white">{servicio.nameService}</h3>
+                    <span 
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        background: (servicio.status !== false) ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                        color: (servicio.status !== false) ? "#34d399" : "#f87171",
+                        border: `1px solid ${(servicio.status !== false) ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
+                      }}
+                    >
+                      {(servicio.status !== false) ? "Activo" : "Inactivo"}
+                    </span>
+                  </div>
                   <p className="text-[13px] text-white/40 leading-relaxed mb-4 flex-1">
                     {servicio.description}
                   </p>
@@ -212,22 +316,37 @@ export default function Servicios() {
                       <div className="text-[12px] text-white/40 font-medium">Tarifa Base</div>
                       <div className="text-emerald-400 font-bold text-base">${servicio.price}</div>
                     </div>
-                    <button
-                      onClick={() => handleDeleteServicio(servicio._id)}
-                      className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
-                      style={{
-                        background: "rgba(239, 68, 68, 0.15)",
-                        border: "1px solid rgba(239, 68, 68, 0.3)",
-                      }}
-                      title="Eliminar"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        <line x1="10" y1="11" x2="10" y2="17"></line>
-                        <line x1="14" y1="11" x2="14" y2="17"></line>
-                      </svg>
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditServicio(servicio)}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
+                        style={{
+                          background: "rgba(59, 130, 246, 0.15)",
+                          border: "1px solid rgba(59, 130, 246, 0.3)",
+                        }}
+                        title="Editar"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteServicio(servicio._id)}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
+                        style={{
+                          background: "rgba(239, 68, 68, 0.15)",
+                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                        }}
+                        title="Eliminar"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          <line x1="10" y1="11" x2="10" y2="17"></line>
+                          <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -261,7 +380,9 @@ export default function Servicios() {
           >
             {/* Header del modal */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Agregar Nuevo Servicio</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingId ? "Editar Servicio" : "Agregar Nuevo Servicio"}
+              </h2>
               <button
                 onClick={handleCloseModal}
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/10 transition-all duration-200 cursor-pointer"
@@ -416,7 +537,7 @@ export default function Servicios() {
                   boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)",
                 }}
               >
-                Guardar Servicio
+                {editingId ? "Actualizar Servicio" : "Guardar Servicio"}
               </button>
             </div>
           </div>
