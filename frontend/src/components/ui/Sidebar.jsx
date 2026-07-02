@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import logoSertena from "../../assets/Logo.png"
 import useAuth from "../../hooks/useAuth"
@@ -9,6 +10,7 @@ import Swal from "sweetalert2"
  * Recibe el nombre de la pestaña activa para resaltar el elemento correspondiente del menu.
  */
 export default function Sidebar({ activeTab = "Inicio" }) {
+  const [showDropdown, setShowDropdown] = useState(false)
   const navigate = useNavigate()
   const { logout } = useAuth()
 
@@ -146,32 +148,58 @@ export default function Sidebar({ activeTab = "Inicio" }) {
         </nav>
       </div>
 
-      {/* Boton del perfil de usuario */}
+      {/* Menú de perfil de usuario con Dropdown */}
       <div className="relative mt-8">
+        {/* Dropdown Menu */}
+        {showDropdown && (
+          <div className="absolute bottom-full left-0 w-full mb-2 bg-[#001a1a] border border-[#00E9E9]/30 rounded-xl overflow-hidden shadow-xl z-20">
+            <button
+              onClick={() => setShowDropdown(false)}
+              className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-[#00E9E9]/10 hover:text-[#00E9E9] transition-colors flex items-center gap-2 border-b border-white/5"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              Configuración
+            </button>
+            <button
+              onClick={() => {
+                setShowDropdown(false)
+                handleLogout()
+              }}
+              className="w-full text-left px-4 py-3 text-sm text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors flex items-center gap-2"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              Cerrar Sesión
+            </button>
+          </div>
+        )}
+
         <button
-          onClick={handleLogout}
+          onClick={() => setShowDropdown(!showDropdown)}
           className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/10 transition-all duration-300"
           style={{
             background: "rgba(255, 255, 255, 0.05)",
             border: "1px solid rgba(255, 255, 255, 0.1)",
           }}
-          title="Cerrar Sesión"
+          title="Menú de Usuario"
         >
           <div className="flex items-center gap-3 text-left">
-            <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20">
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100&h=100"
-                alt="Admin User Avatar"
-                className="w-full h-full object-cover"
-              />
-            </div>
             <div>
               <div className="font-semibold text-sm">Admin User</div>
               <div className="text-[11px] text-white/40">Conectado</div>
             </div>
           </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2">
-            <polyline points="18 15 12 9 6 15" />
+          <svg 
+            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2"
+            style={{ transform: showDropdown ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}
+          >
+            <polyline points="6 9 12 15 18 9" />
           </svg>
         </button>
       </div>
