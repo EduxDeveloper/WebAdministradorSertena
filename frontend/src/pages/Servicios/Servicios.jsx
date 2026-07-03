@@ -117,39 +117,27 @@ export default function Servicios() {
   }
 
   const handleSaveServicio = async () => {
-
-    // VALIDACION: nombre del servicio requerido y con longitud razonable
-    const nombre = formData.nameService.trim()
-    if (!nombre) {
-      alert("El nombre del servicio es obligatorio.")
-      return
-    }
-    if (nombre.length < 3 || nombre.length > 50) {
-      alert("El nombre del servicio debe tener entre 3 y 50 caracteres.")
-      return
-    }
-
-    // VALIDACION: descripcion requerida
-    const descripcion = formData.description.trim()
-    if (!descripcion) {
-      alert("La descripcion del servicio es obligatoria.")
+    if (!formData.nameService || !formData.price || !formData.description) {
+      Swal.fire({
+        title: "Campos Incompletos",
+        text: "Por favor llena todos los campos (Nombre, Tarifa, Descripción).",
+        icon: "warning",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9"
+      })
       return
     }
 
-    // VALIDACION: tarifa requerida, numerica y mayor a cero
-    const precio = Number(formData.price)
-    if (formData.price === "" || Number.isNaN(precio)) {
-      alert("Ingrese una tarifa base valida.")
-      return
-    }
-    if (precio <= 0) {
-      alert("La tarifa base debe ser mayor a cero.")
-      return
-    }
-
-    // VALIDACION: imagen requerida
-    if (!formData.image) {
-      alert("Por favor selecciona una imagen para el servicio.")
+    if (!formData.image && !editingId) {
+      Swal.fire({
+        title: "Imagen Requerida",
+        text: "Por favor selecciona una imagen para el servicio.",
+        icon: "warning",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9"
+      })
       return
     }
 
