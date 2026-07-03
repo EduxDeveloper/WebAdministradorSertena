@@ -7,6 +7,7 @@ import useAuth from "../../hooks/useAuth"
  * registrados (nombre, correo, contraseña, tipo) y permite agregar nuevos clientes
  * mediante un modal con formulario y toggle de verificacion.
  */
+// Formato basico de correo electronico usado por validateForm
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function Clientes() {

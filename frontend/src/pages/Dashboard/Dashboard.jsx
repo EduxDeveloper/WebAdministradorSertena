@@ -12,6 +12,8 @@ import useAuth from "../../hooks/useAuth"
 const DIAS_SEMANA = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
 const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
+// Fuerza cualquier respuesta de la API a un array real, para no romper .map/.filter/.reduce
+// si el backend devuelve null, un objeto de error, o cualquier otra cosa inesperada.
 const toArray = (value) => (Array.isArray(value) ? value : [])
 
 // Parseo robusto de precios: acepta numeros nativos, strings con formato ("$1,200.00")
@@ -27,6 +29,7 @@ const parsePrice = (value) => {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
+// Convierte el campo dateStart del proyecto a un Date valido, o null si no existe / es invalido.
 const parseProjectDate = (proyecto) => {
   const raw = proyecto?.dateStart
   if (!raw) return null
@@ -34,6 +37,7 @@ const parseProjectDate = (proyecto) => {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
+// Formatea numeros grandes para las etiquetas del eje Y del grafico (ej. 92000 -> "92k").
 const formatCompact = (value) => {
   if (!Number.isFinite(value)) return "0"
   if (value >= 1000) return `${Math.round(value / 1000)}k`
