@@ -1,11 +1,37 @@
 import { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
+import Swal from "sweetalert2"
+
+// Nombres cortos de mes (es-ES) generados con la misma API que usa el DatePicker,
+// para poder parsear de vuelta el string que produce (ej. "05 oct - 2026")
+// sin depender de una lista fija que podria no coincidir segun el ICU del entorno.
+const MESES_CORTOS = Array.from({ length: 12 }, (_, i) =>
+  new Date(2000, i, 1).toLocaleString('es-ES', { month: 'short' }).toLowerCase()
+)
+
+// Convierte tanto fechas ISO (las que vienen del backend) como el formato
+// "DD mon - YYYY" que genera el DatePicker personalizado, a un objeto Date real.
+const parseCitaDate = (value) => {
+  if (!value || !String(value).trim()) return null
+
+  const match = String(value).trim().match(/^(\d{1,2})\s+([a-záéíóúñ.]+)\s*-\s*(\d{4})$/i)
+  if (match) {
+    const [, dia, mesTexto, anio] = match
+    const mesIndex = MESES_CORTOS.indexOf(mesTexto.toLowerCase())
+    if (mesIndex !== -1) {
+      return new Date(Number(anio), mesIndex, Number(dia))
+    }
+  }
+
+  const nativo = new Date(value)
+  return Number.isNaN(nativo.getTime()) ? null : nativo
+}
 
 /**
  * Componente DatePicker personalizado
  */
-function DatePicker({ value, onChange, label }) {
+function DatePicker({ value, onChange, label, error }) {
   const [showPicker, setShowPicker] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 9)) // Octubre 2026
 
@@ -67,11 +93,14 @@ function DatePicker({ value, onChange, label }) {
         className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400 text-left"
         style={{
           background: "rgba(255,255,255,0.5)",
-          border: "1px solid rgba(0,0,0,0.1)",
+          border: error ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
         }}
       >
         {value || "Seleccionar fecha"}
       </button>
+      {error && (
+        <p className="text-red-400 text-xs mt-1">{error}</p>
+      )}
 
       {showPicker && (
         <div
@@ -200,6 +229,61 @@ export default function ProximasCitas() {
     precioFinal: "",
   })
 
+  // Errores de validacion por campo del formulario de edicion
+  const [errors, setErrors] = useState({})
+
+  // Actualiza un campo del formulario y limpia su error asociado al modificarlo
+  const handleFieldChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    setErrors(prev => (prev[field] ? { ...prev, [field]: undefined } : prev))
+  }
+
+  // Valida los campos del formulario de edicion. Devuelve true si todo es valido
+  // y en caso contrario carga el estado `errors` con los mensajes por campo.
+  const validateForm = () => {
+    const newErrors = {}
+
+    if (!formData.nombre || !formData.nombre.trim()) {
+      newErrors.nombre = "El cliente es obligatorio."
+    }
+
+    if (!formData.servicio || !formData.servicio.trim()) {
+      newErrors.servicio = "El servicio es obligatorio."
+    }
+
+    if (!formData.inicio || !String(formData.inicio).trim()) {
+      newErrors.inicio = "La fecha de inicio es obligatoria."
+    }
+
+    if (!formData.fin || !String(formData.fin).trim()) {
+      newErrors.fin = "La fecha de fin es obligatoria."
+    }
+
+    if (!newErrors.inicio && !newErrors.fin) {
+      const fechaInicio = parseCitaDate(formData.inicio)
+      const fechaFin = parseCitaDate(formData.fin)
+      if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+        newErrors.fin = "La fecha de fin no puede ser anterior a la fecha de inicio."
+      }
+    }
+
+    const telefonoLimpio = String(formData.telefono || "").replace(/\D/g, "")
+    if (telefonoLimpio.length < 8) {
+      newErrors.telefono = "El telefono debe tener al menos 8 digitos."
+    }
+
+    const precioTexto = String(formData.precioFinal ?? "").trim()
+    // Se conserva el signo "-" al limpiar (solo se descartan simbolos de moneda/separadores)
+    // para poder detectar numeros negativos en vez de que el regex se los coma silenciosamente.
+    const precio = parseFloat(precioTexto.replace(/[^0-9.\-]/g, ""))
+    if (precioTexto === "" || !Number.isFinite(precio) || precio < 0) {
+      newErrors.precioFinal = "El precio final debe ser un numero valido mayor o igual a 0."
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   // Datos quemados de citas
   // Contar citas por estado
   const citasActivas = citas.length
@@ -232,6 +316,7 @@ export default function ProximasCitas() {
       estado: cita.estado,
       precioFinal: cita.precio,
     })
+    setErrors({})
     setSelectedCita(cita)
     setShowDetailsModal(false)
     setShowModal(true)
@@ -241,6 +326,7 @@ export default function ProximasCitas() {
   const handleCloseModal = () => {
     setShowModal(false)
     setSelectedCita(null)
+    setErrors({})
   }
 
   const handleCloseDetails = () => {
@@ -250,6 +336,8 @@ export default function ProximasCitas() {
 
   const handleSaveCita = async () => {
     if (!formData.id) return // No support for create yet based on UI
+
+    if (!validateForm()) return
 
     try {
       const payload = {
@@ -275,7 +363,14 @@ export default function ProximasCitas() {
       loadCitas()
     } catch (error) {
       console.error("Error al guardar cita:", error)
-      alert("Error al guardar: " + error.message)
+      Swal.fire({
+        icon: "error",
+        title: "Error al guardar",
+        text: error.message || "No se pudo guardar la cita. Intenta nuevamente.",
+        background: "#15354d",
+        color: "#fff",
+        confirmButtonColor: "#10b981",
+      })
     }
   }
 
@@ -957,26 +1052,32 @@ export default function ProximasCitas() {
                 <input
                   type="text"
                   value={formData.nombre}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                  onChange={(e) => handleFieldChange("nombre", e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
-                    border: "1px solid rgba(0,0,0,0.1)",
+                    border: errors.nombre ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
                   }}
                 />
+                {errors.nombre && (
+                  <p className="text-red-400 text-xs mt-1">{errors.nombre}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Servicio</label>
                 <input
                   type="text"
                   value={formData.servicio}
-                  onChange={(e) => setFormData(prev => ({ ...prev, servicio: e.target.value }))}
+                  onChange={(e) => handleFieldChange("servicio", e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
-                    border: "1px solid rgba(0,0,0,0.1)",
+                    border: errors.servicio ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
                   }}
                 />
+                {errors.servicio && (
+                  <p className="text-red-400 text-xs mt-1">{errors.servicio}</p>
+                )}
               </div>
             </div>
 
@@ -985,7 +1086,7 @@ export default function ProximasCitas() {
               <label className="block text-sm font-semibold text-gray-800 mb-2">Descripción</label>
               <textarea
                 value={formData.descripcion}
-                onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
+                onChange={(e) => handleFieldChange("descripcion", e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400 resize-none h-24"
                 style={{
                   background: "rgba(255,255,255,0.5)",
@@ -998,13 +1099,15 @@ export default function ProximasCitas() {
             <div className="grid grid-cols-2 gap-4 mb-5">
               <DatePicker
                 value={formData.inicio}
-                onChange={(date) => setFormData(prev => ({ ...prev, inicio: date }))}
+                onChange={(date) => handleFieldChange("inicio", date)}
                 label="INICIO"
+                error={errors.inicio}
               />
               <DatePicker
                 value={formData.fin}
-                onChange={(date) => setFormData(prev => ({ ...prev, fin: date }))}
+                onChange={(date) => handleFieldChange("fin", date)}
                 label="FIN ESTIMADO"
+                error={errors.fin}
               />
             </div>
 
@@ -1015,20 +1118,23 @@ export default function ProximasCitas() {
                 <input
                   type="text"
                   value={formData.telefono}
-                  onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
+                  onChange={(e) => handleFieldChange("telefono", e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
-                    border: "1px solid rgba(0,0,0,0.1)",
+                    border: errors.telefono ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
                   }}
                 />
+                {errors.telefono && (
+                  <p className="text-red-400 text-xs mt-1">{errors.telefono}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Ubicación</label>
                 <input
                   type="text"
                   value={formData.ubicacion}
-                  onChange={(e) => setFormData(prev => ({ ...prev, ubicacion: e.target.value }))}
+                  onChange={(e) => handleFieldChange("ubicacion", e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
@@ -1044,7 +1150,7 @@ export default function ProximasCitas() {
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Estado</label>
                 <select
                   value={formData.estado}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estado: e.target.value }))}
+                  onChange={(e) => handleFieldChange("estado", e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
@@ -1061,13 +1167,16 @@ export default function ProximasCitas() {
                 <input
                   type="text"
                   value={formData.precioFinal}
-                  onChange={(e) => setFormData(prev => ({ ...prev, precioFinal: e.target.value }))}
+                  onChange={(e) => handleFieldChange("precioFinal", e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
-                    border: "1px solid rgba(0,0,0,0.1)",
+                    border: errors.precioFinal ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
                   }}
                 />
+                {errors.precioFinal && (
+                  <p className="text-red-400 text-xs mt-1">{errors.precioFinal}</p>
+                )}
               </div>
             </div>
 

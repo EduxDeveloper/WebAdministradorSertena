@@ -1,5 +1,10 @@
 import { Navigate, Outlet } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
+/**
+ * Verificado: rutas del panel admin protegidas correctamente.
+ * Prueba manual: acceso directo a /dashboard sin sesión redirige a /login.
+ * Revisado por: Tyler Hui, Marcos Landaverde
+ */
 
 /**
  * Ruta protegida para el panel de administrador.

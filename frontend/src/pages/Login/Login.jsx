@@ -12,6 +12,9 @@ import logoSertena from "../../assets/Logo.png"
 import useAuth from "../../hooks/useAuth"
 import Swal from "sweetalert2"
 
+// Expresion regular para validar el formato basico de un correo electronico
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 // Pagina de inicio de sesion
 // Es la primera pantalla que ve el usuario al entrar a la aplicacion
 export default function Login() {
@@ -21,15 +24,42 @@ export default function Login() {
   const [password, setPassword] = useState("")
   // Estado para saber si estamos esperando la respuesta del servidor
   const [isLoading, setIsLoading] = useState(false)
+  // Estado para los errores de validacion inline, por campo
+  const [errors, setErrors] = useState({ email: "", password: "" })
   // Hook para navegar a otras paginas
   const navigate = useNavigate()
   // Funcion login que viene del contexto de autenticacion
   const { login } = useAuth()
 
+  // Valida el formulario localmente antes de llamar al backend.
+  // Devuelve true si todo es valido; si no, carga `errors` con los mensajes por campo.
+  const validateForm = () => {
+    const newErrors = { email: "", password: "" }
+
+    if (!email.trim()) {
+      newErrors.email = "El correo electronico es obligatorio."
+    } else if (!EMAIL_REGEX.test(email.trim())) {
+      newErrors.email = "Ingresa un correo electronico valido."
+    }
+
+    if (!password) {
+      newErrors.password = "La contraseña es obligatoria."
+    } else if (password.length < 6) {
+      newErrors.password = "La contraseña debe tener al menos 6 caracteres."
+    }
+
+    setErrors(newErrors)
+    return !newErrors.email && !newErrors.password
+  }
+
   // Funcion que se ejecuta cuando el usuario envia el formulario
   const handleSubmit = async (e) => {
     // Evitamos que la pagina se recargue al enviar el formulario
     e.preventDefault()
+
+    // Validacion local: si algo esta mal, mostramos el error inline y no llamamos al backend
+    if (!validateForm()) return
+
     // Activamos el estado de carga para mostrar "Ingresando..." en el boton
     setIsLoading(true)
 
@@ -103,7 +133,8 @@ export default function Login() {
           </div>
 
           {/* Formulario de inicio de sesion */}
-          <form onSubmit={handleSubmit}>
+          {/* noValidate desactiva el globo nativo del navegador para que mande el control a nuestra validacion inline (errors) */}
+          <form onSubmit={handleSubmit} noValidate>
 
             {/* Campo de correo electronico */}
             <div
@@ -128,12 +159,19 @@ export default function Login() {
                 id="login-email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  if (errors.email) setErrors(prev => ({ ...prev, email: "" }))
+                }}
                 placeholder="salvador@gmail.com"
                 className="login-input"
+                style={errors.email ? { border: '1px solid rgba(248, 113, 113, 0.5)' } : undefined}
                 required
                 autoComplete="email"
               />
+              {errors.email && (
+                <p className="text-red-400 text-xs mt-1.5">{errors.email}</p>
+              )}
             </div>
 
             {/* Campo de contraseña */}
@@ -159,12 +197,19 @@ export default function Login() {
                 id="login-password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  if (errors.password) setErrors(prev => ({ ...prev, password: "" }))
+                }}
                 placeholder="contraseña"
                 className="login-input"
+                style={errors.password ? { border: '1px solid rgba(248, 113, 113, 0.5)' } : undefined}
                 required
                 autoComplete="current-password"
               />
+              {errors.password && (
+                <p className="text-red-400 text-xs mt-1.5">{errors.password}</p>
+              )}
             </div>
 
             {/* Boton para enviar el formulario */}

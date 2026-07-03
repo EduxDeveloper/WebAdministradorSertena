@@ -7,10 +7,16 @@ import useAuth from "../../hooks/useAuth"
  * registrados (nombre, apellido, correo, salario, estado, verificación) y permite agregar
  * nuevos empleados mediante un modal con formulario y toggle de verificación.
  */
+
+// Solo letras (incluye acentos y ñ) y espacios
+const NOMBRE_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function Empleados() {
   const [showModal, setShowModal] = useState(false)
   const [empleados, setEmpleados] = useState([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const { fetchApi } = useAuth()
 
   // Estado del formulario del modal para agregar un nuevo empleado
@@ -23,6 +29,10 @@ export default function Empleados() {
     estado: "activo",
     verificado: true,
   })
+
+  // Errores de validacion por campo y error general de la API
+  const [errors, setErrors] = useState({})
+  const [apiError, setApiError] = useState("")
 
   // Cargar empleados al montar el componente
   useEffect(() => {
@@ -41,9 +51,45 @@ export default function Empleados() {
     }
   }
 
+  // Valida los campos del formulario. Devuelve true si todo es valido
+  // y en caso contrario carga el estado `errors` con los mensajes por campo.
+  const validateForm = () => {
+    const newErrors = {}
+
+    const nombre = formData.nombre.trim()
+    if (!nombre || nombre.length < 2 || !NOMBRE_REGEX.test(nombre)) {
+      newErrors.nombre = "El nombre es obligatorio, minimo 2 caracteres y solo letras."
+    }
+
+    const apellido = formData.apellido.trim()
+    if (!apellido || apellido.length < 2 || !NOMBRE_REGEX.test(apellido)) {
+      newErrors.apellido = "El apellido es obligatorio, minimo 2 caracteres y solo letras."
+    }
+
+    if (!EMAIL_REGEX.test(formData.email.trim())) {
+      newErrors.email = "Ingresa un correo electronico valido."
+    }
+
+    if (formData.contraseña.length < 6) {
+      newErrors.contraseña = "La contraseña debe tener al menos 6 caracteres."
+    }
+
+    const salarioLimpio = parseFloat(String(formData.salario).replace(/[^0-9.]/g, ""))
+    if (!formData.salario || !Number.isFinite(salarioLimpio) || salarioLimpio <= 0) {
+      newErrors.salario = "El salario es obligatorio y debe ser un numero mayor a 0."
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   // Guardar un nuevo empleado
   const handleSaveEmpleado = async () => {
+    setApiError("")
+    if (!validateForm()) return
+
     try {
+      setSaving(true)
       await fetchApi("/empleados/crear", {
         method: "POST",
         body: JSON.stringify(formData),
@@ -52,7 +98,9 @@ export default function Empleados() {
       loadEmpleados() // Recargar la tabla
     } catch (error) {
       console.error("Error al crear empleado:", error)
-      alert("Hubo un error al crear el empleado: " + error.message)
+      setApiError(error.message || "Hubo un error al crear el empleado. Intenta nuevamente.")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -78,16 +126,25 @@ export default function Empleados() {
       estado: "activo",
       verificado: true,
     })
+    setErrors({})
+    setApiError("")
   }
 
   // Cerrar el modal y limpiar el formulario
   const handleCloseModal = () => {
+    if (saving) return
     setShowModal(false)
     resetForm()
   }
 
+  // Actualiza un campo del formulario y limpia su error asociado al escribir
+  const handleFieldChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    setErrors(prev => (prev[field] ? { ...prev, [field]: undefined } : prev))
+  }
+
   // Contar empleados activos
-  const empleadosActivos = empleados.filter(e => e.estado?.toLowerCase() === "activo").length
+  const empleadosActivos = empleados.filter(e => e.estado?.toLowerCase().trim() === "activo").length
   const totalEmpleados = empleados.length
 
   return (
@@ -223,66 +280,89 @@ export default function Empleados() {
                     <td colSpan="7" className="px-6 py-5 text-center text-white/50">No hay empleados registrados</td>
                   </tr>
                 ) : (
-                  empleados.map((empleado) => (
-                    <tr
-                      key={empleado._id}
-                      className="hover:bg-white/[0.03] transition-colors duration-200"
-                    >
-                      <td className="px-6 py-5 text-sm font-medium text-white/90">{empleado.nombre}</td>
-                      <td className="px-6 py-5 text-sm text-white/60">{empleado.apellido}</td>
-                      <td className="px-6 py-5 text-sm text-white/60">{empleado.email}</td>
-                      <td className="px-6 py-5 text-sm text-white/60">${empleado.salario}</td>
-                      <td className="px-6 py-5 text-sm">
-                        <span
-                          className="px-3 py-1.5 rounded-full text-xs font-medium flex w-fit"
-                          style={{
-                            background: empleado.estado?.toLowerCase() === "activo" 
-                              ? "rgba(16, 185, 129, 0.2)"
-                              : "rgba(107, 114, 128, 0.2)",
-                            color: empleado.estado?.toLowerCase() === "activo" 
-                              ? "#10b981"
-                              : "#9ca3af",
-                          }}
-                        >
-                          • {empleado.estado || "activo"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center justify-center">
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#10b981"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                  empleados.map((empleado) => {
+                    const estadoNormalizado = (empleado.estado || "activo").toLowerCase().trim()
+                    const estaActivo = estadoNormalizado === "activo"
+
+                    return (
+                      <tr
+                        key={empleado._id}
+                        className="hover:bg-white/[0.03] transition-colors duration-200"
+                      >
+                        <td className="px-6 py-5 text-sm font-medium text-white/90">{empleado.nombre}</td>
+                        <td className="px-6 py-5 text-sm text-white/60">{empleado.apellido}</td>
+                        <td className="px-6 py-5 text-sm text-white/60">{empleado.email}</td>
+                        <td className="px-6 py-5 text-sm text-white/60">${empleado.salario}</td>
+                        <td className="px-6 py-5 text-sm">
+                          <span
+                            className="px-3 py-1.5 rounded-full text-xs font-medium flex w-fit capitalize"
+                            style={{
+                              background: estaActivo
+                                ? "rgba(16, 185, 129, 0.2)"
+                                : "rgba(107, 114, 128, 0.2)",
+                              color: estaActivo
+                                ? "#10b981"
+                                : "#9ca3af",
+                            }}
                           >
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 text-right">
-                        <button
-                          onClick={() => handleDeleteEmpleado(empleado._id)}
-                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer ml-auto"
-                          style={{
-                            background: "rgba(239, 68, 68, 0.15)",
-                            border: "1px solid rgba(239, 68, 68, 0.3)",
-                          }}
-                          title="Eliminar"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            <line x1="10" y1="11" x2="10" y2="17"></line>
-                            <line x1="14" y1="11" x2="14" y2="17"></line>
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                            • {estadoNormalizado}
+                          </span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex items-center justify-center">
+                            {empleado.verificado ? (
+                              <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#10b981"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                title="Verificado"
+                              >
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            ) : (
+                              <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#f87171"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                title="No verificado"
+                              >
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-right">
+                          <button
+                            onClick={() => handleDeleteEmpleado(empleado._id)}
+                            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer ml-auto"
+                            style={{
+                              background: "rgba(239, 68, 68, 0.15)",
+                              border: "1px solid rgba(239, 68, 68, 0.3)",
+                            }}
+                            title="Eliminar"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
@@ -318,7 +398,8 @@ export default function Empleados() {
               <h2 className="text-xl font-bold text-gray-900">Agregar Nuevo Empleado</h2>
               <button
                 onClick={handleCloseModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/10 transition-all duration-200 cursor-pointer"
+                disabled={saving}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/10 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -333,13 +414,16 @@ export default function Empleados() {
               <input
                 type="text"
                 value={formData.nombre}
-                onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                onChange={(e) => handleFieldChange("nombre", e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                 style={{
                   background: "rgba(255,255,255,0.5)",
-                  border: "1px solid rgba(0,0,0,0.1)",
+                  border: errors.nombre ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
                 }}
               />
+              {errors.nombre && (
+                <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
+              )}
             </div>
 
             {/* Campo: Apellido */}
@@ -348,13 +432,16 @@ export default function Empleados() {
               <input
                 type="text"
                 value={formData.apellido}
-                onChange={(e) => setFormData(prev => ({ ...prev, apellido: e.target.value }))}
+                onChange={(e) => handleFieldChange("apellido", e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                 style={{
                   background: "rgba(255,255,255,0.5)",
-                  border: "1px solid rgba(0,0,0,0.1)",
+                  border: errors.apellido ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
                 }}
               />
+              {errors.apellido && (
+                <p className="text-red-500 text-xs mt-1">{errors.apellido}</p>
+              )}
             </div>
 
             {/* Campo: Correo */}
@@ -363,13 +450,16 @@ export default function Empleados() {
               <input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => handleFieldChange("email", e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                 style={{
                   background: "rgba(255,255,255,0.5)",
-                  border: "1px solid rgba(0,0,0,0.1)",
+                  border: errors.email ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
                 }}
               />
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              )}
             </div>
 
             {/* Fila: Contraseña y Salario */}
@@ -378,28 +468,35 @@ export default function Empleados() {
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Contraseña</label>
                 <input
                   type="password"
+                  autoComplete="new-password"
                   value={formData.contraseña}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contraseña: e.target.value }))}
+                  onChange={(e) => handleFieldChange("contraseña", e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
-                    border: "1px solid rgba(0,0,0,0.1)",
+                    border: errors.contraseña ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
                   }}
                 />
+                {errors.contraseña && (
+                  <p className="text-red-500 text-xs mt-1">{errors.contraseña}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Salario</label>
                 <input
                   type="text"
                   value={formData.salario}
-                  onChange={(e) => setFormData(prev => ({ ...prev, salario: e.target.value }))}
+                  onChange={(e) => handleFieldChange("salario", e.target.value)}
                   placeholder="$0.00"
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
-                    border: "1px solid rgba(0,0,0,0.1)",
+                    border: errors.salario ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
                   }}
                 />
+                {errors.salario && (
+                  <p className="text-red-500 text-xs mt-1">{errors.salario}</p>
+                )}
               </div>
             </div>
 
@@ -464,11 +561,25 @@ export default function Empleados() {
             {/* Separador */}
             <div className="border-t border-black/10 mb-6" />
 
+            {/* Error general de la API */}
+            {apiError && (
+              <div
+                className="mb-4 px-4 py-3 rounded-lg text-sm font-medium text-red-700"
+                style={{
+                  background: "rgba(239, 68, 68, 0.12)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                }}
+              >
+                {apiError}
+              </div>
+            )}
+
             {/* Botones de accion */}
             <div className="flex items-center justify-end gap-3">
               <button
                 onClick={handleCloseModal}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-black/10 cursor-pointer"
+                disabled={saving}
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-black/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: "rgba(255,255,255,0.5)",
                   border: "1px solid rgba(0,0,0,0.1)",
@@ -478,13 +589,20 @@ export default function Empleados() {
               </button>
               <button
                 onClick={handleSaveEmpleado}
-                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+                disabled={saving}
+                className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:hover:scale-100 disabled:cursor-not-allowed"
                 style={{
                   background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
                   boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)",
                 }}
               >
-                Guardar Empleado
+                {saving && (
+                  <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+                    <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                )}
+                {saving ? "Guardando..." : "Guardar Empleado"}
               </button>
             </div>
           </div>

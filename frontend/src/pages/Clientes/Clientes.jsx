@@ -7,10 +7,13 @@ import useAuth from "../../hooks/useAuth"
  * registrados (nombre, correo, contraseña, tipo) y permite agregar nuevos clientes
  * mediante un modal con formulario y toggle de verificacion.
  */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function Clientes() {
   const [showModal, setShowModal] = useState(false)
   const [clientes, setClientes] = useState([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const { fetchApi } = useAuth()
 
   // Estado del formulario del modal para agregar un nuevo cliente
@@ -21,6 +24,10 @@ export default function Clientes() {
     tipo: "persona",
     isVerified: true,
   })
+
+  // Errores de validacion por campo y error general de la API
+  const [errors, setErrors] = useState({})
+  const [apiError, setApiError] = useState("")
 
   // Cargar clientes al montar el componente
   useEffect(() => {
@@ -39,9 +46,34 @@ export default function Clientes() {
     }
   }
 
+  // Valida los campos del formulario. Devuelve true si todo es valido
+  // y en caso contrario carga el estado `errors` con los mensajes por campo.
+  const validateForm = () => {
+    const newErrors = {}
+
+    if (!formData.nombre.trim() || formData.nombre.trim().length < 3) {
+      newErrors.nombre = "El nombre debe tener al menos 3 caracteres."
+    }
+
+    if (!EMAIL_REGEX.test(formData.email.trim())) {
+      newErrors.email = "Ingresa un correo electronico valido."
+    }
+
+    if (formData.contraseña.length < 6) {
+      newErrors.contraseña = "La contraseña debe tener al menos 6 caracteres."
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   // Guardar un nuevo cliente
   const handleSaveCliente = async () => {
+    setApiError("")
+    if (!validateForm()) return
+
     try {
+      setSaving(true)
       await fetchApi("/clientes/crear", {
         method: "POST",
         body: JSON.stringify(formData),
@@ -50,7 +82,9 @@ export default function Clientes() {
       loadClientes() // Recargar la tabla
     } catch (error) {
       console.error("Error al crear cliente:", error)
-      alert("Hubo un error al crear el cliente: " + error.message)
+      setApiError(error.message || "Hubo un error al crear el cliente. Intenta nuevamente.")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -74,12 +108,20 @@ export default function Clientes() {
       tipo: "persona",
       isVerified: true,
     })
+    setErrors({})
+    setApiError("")
   }
 
   // Cerrar el modal y limpiar el formulario
   const handleCloseModal = () => {
     setShowModal(false)
     resetForm()
+  }
+
+  // Actualiza un campo del formulario y limpia su error asociado al escribir
+  const handleFieldChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    setErrors(prev => (prev[field] ? { ...prev, [field]: undefined } : prev))
   }
 
   return (
@@ -232,13 +274,16 @@ export default function Clientes() {
               <input
                 type="text"
                 value={formData.nombre}
-                onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                onChange={(e) => handleFieldChange("nombre", e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                 style={{
                   background: "rgba(255,255,255,0.5)",
-                  border: "1px solid rgba(0,0,0,0.1)",
+                  border: errors.nombre ? "1px solid #ef4444" : "1px solid rgba(0,0,0,0.1)",
                 }}
               />
+              {errors.nombre && (
+                <p className="mt-1.5 text-[12px] font-medium text-red-600">{errors.nombre}</p>
+              )}
             </div>
 
             {/* Campo: Correo */}
@@ -247,13 +292,16 @@ export default function Clientes() {
               <input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => handleFieldChange("email", e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                 style={{
                   background: "rgba(255,255,255,0.5)",
-                  border: "1px solid rgba(0,0,0,0.1)",
+                  border: errors.email ? "1px solid #ef4444" : "1px solid rgba(0,0,0,0.1)",
                 }}
               />
+              {errors.email && (
+                <p className="mt-1.5 text-[12px] font-medium text-red-600">{errors.email}</p>
+              )}
             </div>
 
             {/* Fila: Contraseña y Tipo */}
@@ -262,21 +310,25 @@ export default function Clientes() {
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Contraseña</label>
                 <input
                   type="password"
+                  autoComplete="new-password"
                   value={formData.contraseña}
-                  onChange={(e) => setFormData(prev => ({ ...prev, contraseña: e.target.value }))}
+                  onChange={(e) => handleFieldChange("contraseña", e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
-                    border: "1px solid rgba(0,0,0,0.1)",
+                    border: errors.contraseña ? "1px solid #ef4444" : "1px solid rgba(0,0,0,0.1)",
                   }}
                 />
+                {errors.contraseña && (
+                  <p className="mt-1.5 text-[12px] font-medium text-red-600">{errors.contraseña}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Tipo</label>
                 <input
                   type="text"
                   value={formData.tipo}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tipo: e.target.value }))}
+                  onChange={(e) => handleFieldChange("tipo", e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",
@@ -318,11 +370,25 @@ export default function Clientes() {
             {/* Separador */}
             <div className="border-t border-black/10 mb-6" />
 
+            {/* Error general de la API */}
+            {apiError && (
+              <div
+                className="mb-4 px-4 py-3 rounded-lg text-sm font-medium text-red-700"
+                style={{
+                  background: "rgba(239, 68, 68, 0.12)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                }}
+              >
+                {apiError}
+              </div>
+            )}
+
             {/* Botones de accion */}
             <div className="flex items-center justify-end gap-3">
               <button
                 onClick={handleCloseModal}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-black/10 cursor-pointer"
+                disabled={saving}
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-black/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: "rgba(255,255,255,0.5)",
                   border: "1px solid rgba(0,0,0,0.1)",
@@ -332,13 +398,14 @@ export default function Clientes() {
               </button>
               <button
                 onClick={handleSaveCliente}
-                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+                disabled={saving}
+                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:hover:scale-100 disabled:cursor-not-allowed"
                 style={{
                   background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
                   boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)",
                 }}
               >
-                Guardar Cliente
+                {saving ? "Guardando..." : "Guardar Cliente"}
               </button>
             </div>
           </div>
