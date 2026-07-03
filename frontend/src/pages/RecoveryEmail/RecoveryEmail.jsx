@@ -22,17 +22,36 @@ export default function RecoveryEmail() {
   // Funcion para solicitar codigo de recuperacion que viene del contexto
   const { requestRecoveryCode } = useAuth()
 
+  // Expresion regular simple para validar formato de correo electronico
+  const CORREO_PATRON = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
   // Funcion que se ejecuta al enviar el formulario
   const handleSubmit = async (e) => {
     // Prevenimos que la pagina se recargue
     e.preventDefault()
     // Limpiamos errores anteriores
     setError("")
+
+    // Quitamos espacios en blanco antes de validar
+    const trimmedEmail = email.trim()
+
+    // VALIDACION: campo requerido
+    if (!trimmedEmail) {
+      setError("El correo electronico es obligatorio")
+      return
+    }
+
+    // VALIDACION: formato de correo valido
+    if (!CORREO_PATRON.test(trimmedEmail)) {
+      setError("Ingrese un correo electronico valido")
+      return
+    }
+
     // Activamos el estado de carga
     setIsLoading(true)
 
     // Llamada REAL al backend: solicita que se envie el codigo OTP al correo
-    const result = await requestRecoveryCode({ email })
+    const result = await requestRecoveryCode({ email: trimmedEmail })
 
     setIsLoading(false)
 
@@ -43,7 +62,8 @@ export default function RecoveryEmail() {
     }
 
     // Si se envio exitosamente, navegamos a la pantalla de verificacion
-    navigate("/verify-code")
+    // Enviamos el correo en el state para poder reenviar el codigo despues
+    navigate("/verify-code", { state: { email: trimmedEmail } })
   }
 
   return (

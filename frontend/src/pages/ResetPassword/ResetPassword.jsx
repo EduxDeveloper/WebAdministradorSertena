@@ -25,11 +25,34 @@ export default function ResetPassword() {
   // Funcion para restablecer la contraseña que viene del contexto
   const { resetPassword } = useAuth()
 
+  // Longitud minima requerida para la nueva contraseña
+  const MIN_PASSWORD_LENGTH = 8
+
   // Funcion que se ejecuta al enviar el formulario
   const handleSubmit = async (e) => {
     e.preventDefault()
     // Limpiamos errores anteriores
     setError("")
+
+    // VALIDACION: campos requeridos
+    if (!password || !confirmPassword) {
+      setError("Debe completar ambos campos")
+      return
+    }
+
+    // VALIDACION: longitud minima de la contraseña
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`)
+      return
+    }
+
+    // VALIDACION: al menos una letra y un numero, para evitar contraseñas debiles
+    const hasLetter = /[a-zA-Z]/.test(password)
+    const hasNumber = /[0-9]/.test(password)
+    if (!hasLetter || !hasNumber) {
+      setError("La contraseña debe incluir letras y numeros")
+      return
+    }
 
     // Validamos que las dos contraseñas sean iguales
     if (password !== confirmPassword) {

@@ -65,13 +65,26 @@ export default function Servicios() {
   }
 
   const handleImageFile = (file) => {
-    if (file && (file.type === "image/png" || file.type === "image/jpeg")) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setFormData(prev => ({ ...prev, image: file, imagenPreview: e.target.result }))
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+
+    // VALIDACION: solo se permiten imagenes PNG o JPEG
+    if (file.type !== "image/png" && file.type !== "image/jpeg") {
+      alert("Solo se permiten imagenes en formato PNG o JPG.")
+      return
     }
+
+    // VALIDACION: tamaño maximo de 10MB (coincide con el texto mostrado en la UI)
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024
+    if (file.size > MAX_SIZE_BYTES) {
+      alert("La imagen no debe superar los 10MB.")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setFormData(prev => ({ ...prev, image: file, imagenPreview: e.target.result }))
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleFileInput = (e) => {
@@ -104,27 +117,39 @@ export default function Servicios() {
   }
 
   const handleSaveServicio = async () => {
-    if (!formData.nameService || !formData.price || !formData.description) {
-      Swal.fire({
-        title: "Campos Incompletos",
-        text: "Por favor llena todos los campos (Nombre, Tarifa, Descripción).",
-        icon: "warning",
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: "#00E9E9"
-      })
+
+    // VALIDACION: nombre del servicio requerido y con longitud razonable
+    const nombre = formData.nameService.trim()
+    if (!nombre) {
+      alert("El nombre del servicio es obligatorio.")
+      return
+    }
+    if (nombre.length < 3 || nombre.length > 50) {
+      alert("El nombre del servicio debe tener entre 3 y 50 caracteres.")
       return
     }
 
-    if (!formData.image && !editingId) {
-      Swal.fire({
-        title: "Imagen Requerida",
-        text: "Por favor selecciona una imagen para el servicio.",
-        icon: "warning",
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: "#00E9E9"
-      })
+    // VALIDACION: descripcion requerida
+    const descripcion = formData.description.trim()
+    if (!descripcion) {
+      alert("La descripcion del servicio es obligatoria.")
+      return
+    }
+
+    // VALIDACION: tarifa requerida, numerica y mayor a cero
+    const precio = Number(formData.price)
+    if (formData.price === "" || Number.isNaN(precio)) {
+      alert("Ingrese una tarifa base valida.")
+      return
+    }
+    if (precio <= 0) {
+      alert("La tarifa base debe ser mayor a cero.")
+      return
+    }
+
+    // VALIDACION: imagen requerida
+    if (!formData.image) {
+      alert("Por favor selecciona una imagen para el servicio.")
       return
     }
 
