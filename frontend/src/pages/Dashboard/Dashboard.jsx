@@ -252,14 +252,14 @@ export default function Dashboard() {
         .filter(p => p.status !== "Completado")
         .slice(0, 5)
         .map(p => ({
-          title: p.idService || "Servicio Programado",
+          title: p.idService?.nameService || (typeof p.idService === 'string' ? p.idService : "Servicio Programado"),
           address: p.clientLocation || "Ubicación no especificada"
         }))
 
       // Agrupar por idService para populares
       const serviceCounts = {}
       validProyects.forEach(p => {
-        const name = p.idService || "Desconocido"
+        const name = p.idService?.nameService || (typeof p.idService === 'string' ? p.idService : "Desconocido")
         if (!serviceCounts[name]) {
           serviceCounts[name] = { count: 0, revenue: 0 }
         }

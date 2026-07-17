@@ -91,9 +91,6 @@ export default function VerifyCode() {
     navigate("/reset-password")
   }
 
-  const handleResend = () => {
-    navigate("/recovery-email")
-  }
 
   // Maneja cuando el usuario escribe en un campo de caracter
   const handleChange = (index, value) => {
