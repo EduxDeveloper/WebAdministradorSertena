@@ -166,8 +166,10 @@ export default function ProximasCitas() {
       // Mapear los datos del backend a la estructura que espera la UI
       const mappedCitas = (data || []).map(cita => ({
         id: cita._id,
-        servicio: cita.idService || "Servicio no asignado",
-        cliente: cita.idCustomer || "Cliente no asignado",
+        servicio: cita.idService?.nameService || (typeof cita.idService === 'string' ? cita.idService : "Servicio no asignado"),
+        cliente: cita.idCustomer?.nombre || (typeof cita.idCustomer === 'string' ? cita.idCustomer : "Cliente no asignado"),
+        idServiceRaw: cita.idService?._id || cita.idService,
+        idCustomerRaw: cita.idCustomer?._id || cita.idCustomer,
         fecha: `${cita.dateStart || ''} - ${cita.dateEnd || ''}`,
         precio: String(cita.finalPrice || "0"),
         estado: cita.status || "Pendiente",
@@ -221,6 +223,8 @@ export default function ProximasCitas() {
   const handleOpenEdit = (cita) => {
     setFormData({
       id: cita.id,
+      idCustomerRaw: cita.idCustomerRaw,
+      idServiceRaw: cita.idServiceRaw,
       nombre: cita.cliente,
       servicio: cita.servicio,
       descripcion: cita.descripcion,
@@ -253,8 +257,8 @@ export default function ProximasCitas() {
 
     try {
       const payload = {
-        idCustomer: formData.nombre,
-        idService: formData.servicio,
+        idCustomer: formData.idCustomerRaw,
+        idService: formData.idServiceRaw,
         dateStart: formData.inicio,
         dateEnd: formData.fin,
         clientPhone: formData.telefono,
@@ -1015,7 +1019,21 @@ export default function ProximasCitas() {
                 <input
                   type="text"
                   value={formData.telefono}
-                  onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
+                  onChange={(e) => {
+                    let value = e.target.value;
+                    let digits = value.replace(/\D/g, '');
+                    if (digits.startsWith('503')) digits = digits.slice(3);
+                    if (digits.length > 4) {
+                      value = '+503 ' + digits.slice(0, 4) + '-' + digits.slice(4, 8);
+                    } else if (digits.length > 0) {
+                      value = '+503 ' + digits;
+                    } else {
+                      value = '';
+                    }
+                    if (value.length <= 14) {
+                      setFormData(prev => ({ ...prev, telefono: value }));
+                    }
+                  }}
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
                   style={{
                     background: "rgba(255,255,255,0.5)",

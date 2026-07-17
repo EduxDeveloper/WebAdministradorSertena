@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
 
@@ -15,6 +15,7 @@ export default function Empleados() {
 
   // Estado del formulario del modal para agregar un nuevo empleado
   const [formData, setFormData] = useState({
+    id: null,
     nombre: "",
     apellido: "",
     email: "",
@@ -22,12 +23,33 @@ export default function Empleados() {
     salario: "",
     estado: "activo",
     verificado: true,
+    services: [],
   })
 
-  // Cargar empleados al montar el componente
+  const [servicesList, setServicesList] = useState([])
+  const [expandedRows, setExpandedRows] = useState({})
+
+  const toggleRow = (id) => {
+    setExpandedRows(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }))
+  }
+
+  // Cargar empleados y servicios al montar el componente
   useEffect(() => {
     loadEmpleados()
+    loadServices()
   }, [])
+
+  const loadServices = async () => {
+    try {
+      const data = await fetchApi("/services")
+      setServicesList(data || [])
+    } catch (error) {
+      console.error("Error al cargar servicios:", error)
+    }
+  }
 
   const loadEmpleados = async () => {
     try {
@@ -41,19 +63,44 @@ export default function Empleados() {
     }
   }
 
-  // Guardar un nuevo empleado
+  // Guardar un nuevo empleado o actualizar
   const handleSaveEmpleado = async () => {
     try {
-      await fetchApi("/empleados/crear", {
-        method: "POST",
-        body: JSON.stringify(formData),
-      })
+      if (formData.id) {
+        await fetchApi(`/empleados/actualizar/${formData.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        })
+      } else {
+        await fetchApi("/empleados/crear", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        })
+      }
       handleCloseModal()
       loadEmpleados() // Recargar la tabla
     } catch (error) {
-      console.error("Error al crear empleado:", error)
-      alert("Hubo un error al crear el empleado: " + error.message)
+      console.error("Error al guardar empleado:", error)
+      alert("Hubo un error al guardar el empleado: " + error.message)
     }
+  }
+
+  // Abrir modal para editar
+  const handleOpenEdit = (empleado) => {
+    setFormData({
+      id: empleado._id,
+      nombre: empleado.nombre || "",
+      apellido: empleado.apellido || "",
+      email: empleado.email || "",
+      contraseña: "",
+      salario: empleado.salario || "",
+      estado: empleado.estado || "activo",
+      verificado: true,
+      services: (empleado.services || []).map(s => s._id || s),
+    })
+    setShowModal(true)
   }
 
   // Eliminar un empleado
@@ -67,9 +114,9 @@ export default function Empleados() {
     }
   }
 
-  // Resetear el formulario a sus valores iniciales
   const resetForm = () => {
     setFormData({
+      id: null,
       nombre: "",
       apellido: "",
       email: "",
@@ -77,6 +124,7 @@ export default function Empleados() {
       salario: "",
       estado: "activo",
       verificado: true,
+      services: [],
     })
   }
 
@@ -224,12 +272,25 @@ export default function Empleados() {
                   </tr>
                 ) : (
                   empleados.map((empleado) => (
-                    <tr
-                      key={empleado._id}
-                      className="hover:bg-white/[0.03] transition-colors duration-200"
-                    >
-                      <td className="px-6 py-5 text-sm font-medium text-white/90">{empleado.nombre}</td>
-                      <td className="px-6 py-5 text-sm text-white/60">{empleado.apellido}</td>
+                    <React.Fragment key={empleado._id}>
+                      <tr
+                        className="hover:bg-white/[0.03] transition-colors duration-200"
+                      >
+                        <td className="px-6 py-5 text-sm font-medium text-white/90 flex items-center gap-2">
+                          <button
+                            onClick={() => toggleRow(empleado._id)}
+                            className="p-1 rounded-md hover:bg-white/10 transition-colors"
+                          >
+                            <svg 
+                              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                              className={`transition-transform duration-200 ${expandedRows[empleado._id] ? 'rotate-180' : ''}`}
+                            >
+                              <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                          </button>
+                          {empleado.nombre}
+                        </td>
+                        <td className="px-6 py-5 text-sm text-white/60">{empleado.apellido}</td>
                       <td className="px-6 py-5 text-sm text-white/60">{empleado.email}</td>
                       <td className="px-6 py-5 text-sm text-white/60">${empleado.salario}</td>
                       <td className="px-6 py-5 text-sm">
@@ -263,10 +324,24 @@ export default function Empleados() {
                           </svg>
                         </div>
                       </td>
-                      <td className="px-6 py-5 text-right">
+                      <td className="px-6 py-5 flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleOpenEdit(empleado)}
+                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
+                          style={{
+                            background: "rgba(59, 130, 246, 0.15)",
+                            border: "1px solid rgba(59, 130, 246, 0.3)",
+                          }}
+                          title="Editar"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                        </button>
                         <button
                           onClick={() => handleDeleteEmpleado(empleado._id)}
-                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer ml-auto"
+                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
                           style={{
                             background: "rgba(239, 68, 68, 0.15)",
                             border: "1px solid rgba(239, 68, 68, 0.3)",
@@ -282,6 +357,53 @@ export default function Empleados() {
                         </button>
                       </td>
                     </tr>
+                    {/* Expanded Row for Services */}
+                    {expandedRows[empleado._id] && (
+                      <tr>
+                        <td colSpan="7" className="p-0 border-b border-white/5">
+                          <div 
+                            className="w-full px-6 py-5 flex flex-col gap-3"
+                            style={{
+                              background: "rgba(255, 255, 255, 0.02)",
+                              boxShadow: "inset 0 4px 6px -4px rgba(0, 0, 0, 0.1)"
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                              </svg>
+                              <span className="text-xs font-bold text-white/50 uppercase tracking-wider">Servicios Asignados a {empleado.nombre}</span>
+                            </div>
+                            
+                            {empleado.services && empleado.services.length > 0 ? (
+                              <div className="flex flex-wrap gap-2.5">
+                                {empleado.services.map(srv => (
+                                  <div 
+                                    key={srv._id || srv} 
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-[1.02]"
+                                    style={{
+                                      background: "linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(52, 211, 153, 0.1) 100%)",
+                                      border: "1px solid rgba(16, 185, 129, 0.3)",
+                                      color: "#34d399",
+                                      boxShadow: "0 2px 10px rgba(16, 185, 129, 0.05)"
+                                    }}
+                                  >
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                    {srv.nameService || 'Servicio Desconocido'}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 px-3 py-2 rounded-lg w-fit" style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.1)" }}>
+                                <span className="text-sm text-white/40 italic">Sin servicios asignados por el momento</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                   ))
                 )}
               </tbody>
@@ -315,7 +437,9 @@ export default function Empleados() {
           >
             {/* Header del modal */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Agregar Nuevo Empleado</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                {formData.id ? "Editar Empleado" : "Agregar Nuevo Empleado"}
+              </h2>
               <button
                 onClick={handleCloseModal}
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/10 transition-all duration-200 cursor-pointer"
@@ -461,6 +585,47 @@ export default function Empleados() {
               </div>
             </div>
 
+            {/* Servicios Asignados */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-800 mb-3">Servicios Asignados</label>
+              <div 
+                className="w-full flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1"
+              >
+                {servicesList.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">No hay servicios disponibles.</p>
+                ) : (
+                  servicesList.map(servicio => {
+                    const isChecked = formData.services.includes(servicio._id)
+                    return (
+                      <button 
+                        key={servicio._id}
+                        type="button"
+                        onClick={() => {
+                          if (!isChecked) {
+                            setFormData(prev => ({ ...prev, services: [...prev.services, servicio._id] }))
+                          } else {
+                            setFormData(prev => ({ ...prev, services: prev.services.filter(id => id !== servicio._id) }))
+                          }
+                        }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 border outline-none ${
+                          isChecked 
+                            ? "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-[0_0_10px_rgba(16,185,129,0.15)]" 
+                            : "bg-white/50 border-gray-200 text-gray-600 hover:bg-white hover:border-emerald-300"
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center border transition-colors duration-200 ${
+                          isChecked ? "bg-emerald-500 border-emerald-500" : "bg-white border-gray-300"
+                        }`}>
+                          {isChecked && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
+                        </div>
+                        {servicio.nameService}
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
             {/* Separador */}
             <div className="border-t border-black/10 mb-6" />
 
@@ -484,7 +649,7 @@ export default function Empleados() {
                   boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)",
                 }}
               >
-                Guardar Empleado
+                {formData.id ? "Guardar Cambios" : "Guardar Empleado"}
               </button>
             </div>
           </div>
