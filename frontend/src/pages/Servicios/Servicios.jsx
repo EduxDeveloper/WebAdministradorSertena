@@ -65,13 +65,26 @@ export default function Servicios() {
   }
 
   const handleImageFile = (file) => {
-    if (file && (file.type === "image/png" || file.type === "image/jpeg")) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setFormData(prev => ({ ...prev, image: file, imagenPreview: e.target.result }))
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+
+    // VALIDACION: solo se permiten imagenes PNG o JPEG
+    if (file.type !== "image/png" && file.type !== "image/jpeg") {
+      alert("Solo se permiten imagenes en formato PNG o JPG.")
+      return
     }
+
+    // VALIDACION: tamaño maximo de 10MB (coincide con el texto mostrado en la UI)
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024
+    if (file.size > MAX_SIZE_BYTES) {
+      alert("La imagen no debe superar los 10MB.")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setFormData(prev => ({ ...prev, image: file, imagenPreview: e.target.result }))
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleFileInput = (e) => {

@@ -1,7 +1,7 @@
 // Importamos los hooks necesarios de React
 import { useState, useRef, useEffect } from "react"
-// Hook para navegar entre paginas
-import { useNavigate } from "react-router-dom"
+// Hooks para navegar entre paginas y leer el state de navegacion
+import { useNavigate, useLocation } from "react-router-dom"
 // Componentes visuales reutilizables
 import AnimatedBackground from "../../components/ui/AnimatedBackground"
 import LiquidGlassCard from "../../components/ui/LiquidGlassCard"
@@ -23,8 +23,20 @@ export default function VerifyCode() {
     useRef(null), useRef(null), useRef(null)
   ]
   const navigate = useNavigate()
-  // Funcion para verificar el codigo que viene del contexto
-  const { verifyRecoveryCode } = useAuth()
+  // Leemos el location para recuperar el email enviado desde RecoveryEmail
+  const location = useLocation()
+  const email = location.state?.email
+  // Funcion para verificar el codigo y para reenviarlo, ambas del contexto
+  const { verifyRecoveryCode, requestRecoveryCode } = useAuth()
+
+  // VALIDACION: si el usuario llega directo a esta pagina sin pasar por
+  // RecoveryEmail (por ejemplo escribiendo la URL a mano), no tenemos el
+  // correo necesario para reenviar el codigo, asi que lo regresamos.
+  useEffect(() => {
+    if (!email) {
+      navigate("/recovery-email", { replace: true })
+    }
+  }, [email, navigate])
 
   // Efecto que se ejecuta cada vez que cambia el codigo
   // Si los 6 caracteres estan llenos, envia automaticamente
@@ -33,6 +45,28 @@ export default function VerifyCode() {
       handleVerify(code.join(""))
     }
   }, [code])
+
+  // Funcion para reenviar el codigo de verificacion al correo
+  // (antes no existia y el boton "Reenviar Codigo" rompia la pagina)
+  const handleResend = async () => {
+    if (!email) return
+
+    setError("")
+    setIsLoading(true)
+
+    const result = await requestRecoveryCode({ email })
+
+    setIsLoading(false)
+
+    if (!result.ok) {
+      setError(result.message)
+      return
+    }
+
+    // Limpiamos el codigo actual para que el usuario ingrese el nuevo
+    setCode(["", "", "", "", "", ""])
+    inputRefs[0].current?.focus()
+  }
 
   // Funcion que hace la llamada real al backend para verificar el codigo
   const handleVerify = async (fullCode) => {
