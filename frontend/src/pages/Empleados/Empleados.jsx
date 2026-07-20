@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
+import Swal from 'sweetalert2'
 
 /**
  * Pagina de Gestión de Empleados - Muestra una tabla con la información de los empleados
@@ -17,6 +18,10 @@ export default function Empleados() {
   const [empleados, setEmpleados] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(4)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
   const { fetchApi } = useAuth()
 
   // Estado del formulario del modal para agregar un nuevo empleado
@@ -50,7 +55,7 @@ export default function Empleados() {
   useEffect(() => {
     loadEmpleados()
     loadServices()
-  }, [])
+  }, [page, limit])
 
   const loadServices = async () => {
     try {
@@ -64,8 +69,14 @@ export default function Empleados() {
   const loadEmpleados = async () => {
     try {
       setLoading(true)
-      const data = await fetchApi("/empleados/obtener")
-      setEmpleados(data || [])
+      const data = await fetchApi(`/empleados/paginado?page=${page}&limit=${limit}`)
+      if (data && data.data) {
+        setEmpleados(data.data)
+        setTotalPages(data.totalPages)
+        setTotal(data.total)
+      } else {
+        setEmpleados([])
+      }
     } catch (error) {
       console.error("Error al cargar empleados:", error)
     } finally {
@@ -153,12 +164,42 @@ export default function Empleados() {
 
   // Eliminar un empleado
   const handleDeleteEmpleado = async (id) => {
-    if (!window.confirm("¿Seguro que deseas eliminar este empleado?")) return
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: "No podrás revertir esto",
+      icon: 'warning',
+      background: "#001a1a",
+      color: "#fff",
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#00E9E9',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+
+    if (!result.isConfirmed) return
+
     try {
       await fetchApi(`/empleados/eliminar/${id}`, { method: "DELETE" })
+      Swal.fire({
+        title: '¡Eliminado!',
+        text: 'El empleado ha sido eliminado.',
+        icon: 'success',
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: '#00E9E9'
+      })
       loadEmpleados()
     } catch (error) {
       console.error("Error al eliminar empleado:", error)
+      Swal.fire({
+        title: "Error",
+        text: "Hubo un error al eliminar",
+        icon: "error",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9"
+      })
     }
   }
 
@@ -490,6 +531,46 @@ export default function Empleados() {
             </table>
           </div>
         </div>
+
+        {/* Paginación */}
+        <div className="flex items-center justify-between w-full mt-2 text-sm text-white/70 px-2">
+          <div className="flex items-center gap-2">
+            <span>Mostrar</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value))
+                setPage(1)
+              }}
+              className="bg-white/10 border border-white/20 rounded px-2 py-1 outline-none focus:border-emerald-400"
+            >
+              <option value={4} className="text-black">4</option>
+              <option value={10} className="text-black">10</option>
+              <option value={20} className="text-black">20</option>
+            </select>
+            <span>registros</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span>Página {page} de {totalPages || 1} ({total} en total)</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 transition-colors"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages || totalPages === 0}
+                className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 transition-colors"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        </div>
+
       </main>
 
       {/* MODAL: Agregar Nuevo Empleado */}

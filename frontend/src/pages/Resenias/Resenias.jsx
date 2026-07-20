@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
+import Swal from 'sweetalert2'
 
 /**
  * Pagina de Gestión de Reseñas - Muestra las reseñas de clientes sobre servicios
@@ -9,18 +10,28 @@ import useAuth from "../../hooks/useAuth"
 export default function Resenias() {
   const [resenias, setResenias] = useState([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(4)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
   const { fetchApi } = useAuth()
 
-  // Cargar reseñas al montar
+  // Cargar reseñas al montar y cuando cambie pagina/limite
   useEffect(() => {
     loadResenias()
-  }, [])
+  }, [page, limit])
 
   const loadResenias = async () => {
     try {
       setLoading(true)
-      const data = await fetchApi("/reviews")
-      setResenias(data || [])
+      const data = await fetchApi(`/reviews/paginado?page=${page}&limit=${limit}`)
+      if (data && data.data) {
+        setResenias(data.data)
+        setTotalPages(data.totalPages)
+        setTotal(data.total)
+      } else {
+        setResenias([])
+      }
     } catch (error) {
       console.error("Error al cargar reseñas:", error)
     } finally {
@@ -29,12 +40,42 @@ export default function Resenias() {
   }
 
   const handleDeleteResenia = async (id) => {
-    if (!window.confirm("¿Seguro que deseas eliminar esta reseña?")) return
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: "No podrás revertir esto",
+      icon: 'warning',
+      background: "#001a1a",
+      color: "#fff",
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#00E9E9',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+
+    if (!result.isConfirmed) return
+
     try {
       await fetchApi(`/reviews/${id}`, { method: "DELETE" })
+      Swal.fire({
+        title: '¡Eliminado!',
+        text: 'La reseña ha sido eliminada.',
+        icon: 'success',
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: '#00E9E9'
+      })
       loadResenias()
     } catch (error) {
       console.error("Error al eliminar:", error)
+      Swal.fire({
+        title: "Error",
+        text: "Hubo un error al eliminar",
+        icon: "error",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9"
+      })
     }
   }
 
@@ -247,6 +288,46 @@ export default function Resenias() {
             </table>
           </div>
         </div>
+
+        {/* Paginación */}
+        <div className="flex items-center justify-between w-full mt-2 text-sm text-white/70 px-2">
+          <div className="flex items-center gap-2">
+            <span>Mostrar</span>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value))
+                setPage(1)
+              }}
+              className="bg-white/10 border border-white/20 rounded px-2 py-1 outline-none focus:border-emerald-400"
+            >
+              <option value={4} className="text-black">4</option>
+              <option value={10} className="text-black">10</option>
+              <option value={20} className="text-black">20</option>
+            </select>
+            <span>registros</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span>Página {page} de {totalPages || 1} ({total} en total)</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 transition-colors"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages || totalPages === 0}
+                className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 transition-colors"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        </div>
+
       </main>
     </div>
   )
