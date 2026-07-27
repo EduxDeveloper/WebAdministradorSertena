@@ -32,7 +32,7 @@ export default function Empleados() {
     email: "",
     contraseña: "",
     salario: "",
-    estado: "activo",
+    status: true,
     verificado: true,
     services: [],
   })
@@ -57,7 +57,7 @@ export default function Empleados() {
     loadServices()
   }, [page, limit])
 
-  const loadServices = async () => {
+  async function loadServices() {
     try {
       const data = await fetchApi("/services")
       setServicesList(data || [])
@@ -66,7 +66,7 @@ export default function Empleados() {
     }
   }
 
-  const loadEmpleados = async () => {
+  async function loadEmpleados() {
     try {
       setLoading(true)
       const data = await fetchApi(`/empleados/paginado?page=${page}&limit=${limit}`)
@@ -155,7 +155,7 @@ export default function Empleados() {
       email: empleado.email || "",
       contraseña: "",
       salario: empleado.salario || "",
-      estado: empleado.estado || "activo",
+      status: empleado.status === true,
       verificado: true,
       services: (empleado.services || []).map(s => s._id || s),
     })
@@ -211,7 +211,7 @@ export default function Empleados() {
       email: "",
       contraseña: "",
       salario: "",
-      estado: "activo",
+      status: true,
       verificado: true,
       services: [],
     })
@@ -233,7 +233,7 @@ export default function Empleados() {
   }
 
   // Contar empleados activos
-  const empleadosActivos = empleados.filter(e => e.estado?.toLowerCase().trim() === "activo").length
+  const empleadosActivos = empleados.filter(e => e.status === true).length
   const totalEmpleados = empleados.length
 
   return (
@@ -370,8 +370,7 @@ export default function Empleados() {
                   </tr>
                 ) : (
                   empleados.map((empleado) => {
-                    const estadoNormalizado = (empleado.estado || "activo").toLowerCase().trim()
-                    const estaActivo = estadoNormalizado === "activo"
+                    const estaActivo = empleado.status === true
 
                     return (
                     <React.Fragment key={empleado._id}>
@@ -407,7 +406,7 @@ export default function Empleados() {
                                 : "#9ca3af",
                             }}
                           >
-                            • {estadoNormalizado}
+                            • {estaActivo ? "Activo" : "Inactivo"}
                           </span>
                         </td>
                         <td className="px-6 py-5">
@@ -713,10 +712,10 @@ export default function Empleados() {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setFormData(prev => ({ ...prev, estado: prev.estado === "activo" ? "inactivo" : "activo" }))}
+                  onClick={() => setFormData(prev => ({ ...prev, status: !prev.status }))}
                   className="relative w-14 h-7 rounded-full transition-all duration-300 cursor-pointer"
                   style={{
-                    background: formData.estado === "activo"
+                    background: formData.status
                       ? "linear-gradient(135deg, #10b981, #34d399)"
                       : "rgba(0,0,0,0.2)",
                   }}
@@ -724,12 +723,12 @@ export default function Empleados() {
                   <div
                     className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300"
                     style={{
-                      left: formData.estado === "activo" ? "calc(100% - 26px)" : "2px",
+                      left: formData.status ? "calc(100% - 26px)" : "2px",
                     }}
                   />
                 </button>
-                <span className={`text-sm font-medium ${formData.estado === "activo" ? "text-emerald-600" : "text-gray-500"} capitalize`}>
-                  {formData.estado}
+                <span className={`text-sm font-medium ${formData.status ? "text-emerald-600" : "text-gray-500"}`}>
+                  {formData.status ? "Activo" : "Inactivo"}
                 </span>
               </div>
             </div>

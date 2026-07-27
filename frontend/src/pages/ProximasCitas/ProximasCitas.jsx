@@ -28,6 +28,20 @@ const parseCitaDate = (value) => {
   return Number.isNaN(nativo.getTime()) ? null : nativo
 }
 
+const formatCitaDate = (value) => {
+  const date = parseCitaDate(value)
+  if (!date) return ""
+
+  return `${String(date.getDate()).padStart(2, '0')} ${date.toLocaleString('es-ES', { month: 'short' })} - ${date.getFullYear()}`
+}
+
+const formatCitaRange = (dateStart, dateEnd) => {
+  const start = formatCitaDate(dateStart)
+  const end = formatCitaDate(dateEnd)
+  if (!start) return "Sin fecha"
+  return start === end || !end ? start : `${start} - ${end}`
+}
+
 /**
  * Componente DatePicker personalizado
  */
@@ -59,6 +73,7 @@ function DatePicker({ value, onChange, label, error }) {
   const handleDayClick = (day) => {
     if (day) {
       const selectedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+      if (selectedDate.getDay() === 0 || selectedDate.getDay() === 6) return
       const formattedDate = `${String(day).padStart(2, '0')} ${currentMonth.toLocaleString('es-ES', { month: 'short' })} - ${selectedDate.getFullYear()}`
       onChange(formattedDate)
       setShowPicker(false)
@@ -150,10 +165,13 @@ function DatePicker({ value, onChange, label, error }) {
                 key={index}
                 type="button"
                 onClick={() => handleDayClick(day)}
+                disabled={day && (new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).getDay() === 0 || new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).getDay() === 6)}
                 className={`
                   w-8 h-8 rounded text-xs font-medium transition-all duration-200
                   ${day
-                    ? "hover:bg-emerald-500 hover:text-white text-gray-900 bg-gray-100"
+                    ? (new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).getDay() === 0 || new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).getDay() === 6
+                      ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                      : "hover:bg-emerald-500 hover:text-white text-gray-900 bg-gray-100")
                     : "opacity-0 cursor-default"
                   }
                 `}
@@ -181,14 +199,25 @@ export default function ProximasCitas() {
   const [selectedDate, setSelectedDate] = useState(new Date()) // Hoy por defecto
 
   const [citas, setCitas] = useState([])
+  const [empleados, setEmpleados] = useState([])
   const [loading, setLoading] = useState(true)
   const { fetchApi } = useAuth()
 
   useEffect(() => {
     loadCitas()
+    loadEmpleados()
   }, [])
 
-  const loadCitas = async () => {
+  async function loadEmpleados() {
+    try {
+      const data = await fetchApi("/empleados")
+      setEmpleados(data || [])
+    } catch (error) {
+      console.error("Error al cargar empleados:", error)
+    }
+  }
+
+  async function loadCitas() {
     try {
       setLoading(true)
       const data = await fetchApi("/proyects")
@@ -199,7 +228,9 @@ export default function ProximasCitas() {
         cliente: cita.idCustomer?.nombre || (typeof cita.idCustomer === 'string' ? cita.idCustomer : "Cliente no asignado"),
         idServiceRaw: cita.idService?._id || cita.idService,
         idCustomerRaw: cita.idCustomer?._id || cita.idCustomer,
-        fecha: `${cita.dateStart || ''} - ${cita.dateEnd || ''}`,
+        idEmpleadoRaw: cita.idEmpleado?._id || cita.idEmpleado,
+        empleado: [cita.idEmpleado?.nombre || cita.idEmpleado?.name, cita.idEmpleado?.apellido || cita.idEmpleado?.lastName].filter(Boolean).join(" ") || "Sin asignar",
+        fecha: formatCitaRange(cita.dateStart, cita.dateEnd),
         precio: String(cita.finalPrice || "0"),
         estado: cita.status || "Pendiente",
         ubicacion: cita.clientLocation || "No especificada",
@@ -229,6 +260,7 @@ export default function ProximasCitas() {
     ubicacion: "",
     estado: "",
     precioFinal: "",
+    idEmpleadoRaw: "",
   })
 
   // Errores de validacion por campo del formulario de edicion
@@ -267,6 +299,9 @@ export default function ProximasCitas() {
       if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
         newErrors.fin = "La fecha de fin no puede ser anterior a la fecha de inicio."
       }
+      if ((fechaInicio && (fechaInicio.getDay() === 0 || fechaInicio.getDay() === 6)) || (fechaFin && (fechaFin.getDay() === 0 || fechaFin.getDay() === 6))) {
+        newErrors.inicio = "No se puede programar trabajo en sábado o domingo."
+      }
     }
 
     const telefonoLimpio = String(formData.telefono || "").replace(/\D/g, "")
@@ -277,7 +312,7 @@ export default function ProximasCitas() {
     const precioTexto = String(formData.precioFinal ?? "").trim()
     // Se conserva el signo "-" al limpiar (solo se descartan simbolos de moneda/separadores)
     // para poder detectar numeros negativos en vez de que el regex se los coma silenciosamente.
-    const precio = parseFloat(precioTexto.replace(/[^0-9.\-]/g, ""))
+    const precio = parseFloat(precioTexto.replace(/[^0-9.-]/g, ""))
     if (precioTexto === "" || !Number.isFinite(precio) || precio < 0) {
       newErrors.precioFinal = "El precio final debe ser un numero valido mayor o igual a 0."
     }
@@ -309,11 +344,12 @@ export default function ProximasCitas() {
       id: cita.id,
       idCustomerRaw: cita.idCustomerRaw,
       idServiceRaw: cita.idServiceRaw,
+      idEmpleadoRaw: cita.idEmpleadoRaw || "",
       nombre: cita.cliente,
       servicio: cita.servicio,
       descripcion: cita.descripcion,
-      inicio: cita.dateStart || cita.fecha.split(' - ')[0],
-      fin: cita.dateEnd || cita.fecha.split(' - ')[1],
+      inicio: formatCitaDate(cita.dateStart),
+      fin: formatCitaDate(cita.dateEnd),
       telefono: cita.telefono,
       ubicacion: cita.ubicacion,
       direccion: cita.direccion,
@@ -347,8 +383,9 @@ export default function ProximasCitas() {
       const payload = {
         idCustomer: formData.idCustomerRaw,
         idService: formData.idServiceRaw,
-        dateStart: formData.inicio,
-        dateEnd: formData.fin,
+        idEmpleado: formData.idEmpleadoRaw || undefined,
+        dateStart: parseCitaDate(formData.inicio)?.toISOString(),
+        dateEnd: parseCitaDate(formData.fin)?.toISOString(),
         clientPhone: formData.telefono,
         clientLocation: formData.ubicacion,
         clientDirection: formData.direccion || "",
@@ -382,6 +419,12 @@ export default function ProximasCitas() {
   const citasFiltradas = filterStatus === "Todas" 
     ? citas 
     : citas.filter(c => c.estado === filterStatus)
+
+  const empleadosElegibles = empleados.filter((empleado) =>
+    empleado.status === true && (empleado.services || []).some((service) =>
+      (service._id || service) === formData.idServiceRaw
+    )
+  )
 
   // Generar calendario dinámico
   const generateCalendar = () => {
@@ -428,16 +471,12 @@ export default function ProximasCitas() {
     if (!selectedDate) return []
     
     // Comparar solo día, mes y año
-    return citas.filter(cita => {
-      // Para este ejemplo, mostraremos las citas que coincidan con ciertos días
-      // En una app real, esto vendría del backend
-      const day = selectedDate.getDate()
-      
-      // Mostrar citas para días específicos (15, 19, 21)
-      if ([15, 19, 21].includes(day)) {
-        return true
-      }
-      return false
+    return citas.filter((cita) => {
+      const citaDate = parseCitaDate(cita.dateStart)
+      return citaDate &&
+        citaDate.getFullYear() === selectedDate.getFullYear() &&
+        citaDate.getMonth() === selectedDate.getMonth() &&
+        citaDate.getDate() === selectedDate.getDate()
     })
   }
 
@@ -629,6 +668,7 @@ export default function ProximasCitas() {
                             <div>
                               <p className="text-sm font-medium text-white/90">{cita.servicio}</p>
                               <p className="text-xs text-white/50">{cita.cliente}</p>
+                              <p className="text-xs text-emerald-300">Técnico: {cita.empleado}</p>
                             </div>
                           </td>
                           <td className="px-6 py-5 text-sm text-white/60">{cita.fecha}</td>
@@ -901,6 +941,7 @@ export default function ProximasCitas() {
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{selectedCita.servicio}</h2>
                 <p className="text-sm text-gray-600">{selectedCita.cliente}</p>
+                <p className="text-sm text-gray-600">Técnico: {selectedCita.empleado}</p>
               </div>
               <button
                 onClick={handleCloseDetails}
@@ -928,9 +969,9 @@ export default function ProximasCitas() {
                     <line x1="16" y1="2" x2="16" y2="6" />
                     <line x1="8" y1="2" x2="8" y2="6" />
                   </svg>
-                  INICIO
+                  FECHA PROGRAMADA
                 </div>
-                <p className="text-gray-600 text-sm">12 Oct 2026</p>
+                <p className="text-gray-600 text-sm">{parseCitaDate(selectedCita.dateStart)?.toLocaleDateString('es-ES') || 'Sin fecha'}</p>
               </div>
               <div
                 className="p-4 rounded-lg"
@@ -945,9 +986,9 @@ export default function ProximasCitas() {
                     <line x1="16" y1="2" x2="16" y2="6" />
                     <line x1="8" y1="2" x2="8" y2="6" />
                   </svg>
-                  FIN ESTIMADO
+                  FINALIZACIÓN
                 </div>
-                <p className="text-gray-600 text-sm">28 Oct 2026</p>
+                <p className="text-gray-600 text-sm">{parseCitaDate(selectedCita.dateEnd)?.toLocaleDateString('es-ES') || 'Sin fecha'}</p>
               </div>
             </div>
 
@@ -1083,6 +1124,24 @@ export default function ProximasCitas() {
                   <p className="text-red-400 text-xs mt-1">{errors.servicio}</p>
                 )}
               </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="block text-sm font-semibold text-gray-800 mb-2">Técnico asignado</label>
+              <select
+                value={formData.idEmpleadoRaw}
+                onChange={(e) => handleFieldChange("idEmpleadoRaw", e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
+                style={{ background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,0,0,0.1)" }}
+              >
+                <option value="">Sin asignar</option>
+                {empleadosElegibles.map((empleado) => (
+                  <option key={empleado._id} value={empleado._id}>
+                    {[empleado.nombre || empleado.name, empleado.apellido || empleado.lastName].filter(Boolean).join(" ")}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Solo se muestran empleados activos que prestan este servicio.</p>
             </div>
 
             {/* Descripción */}

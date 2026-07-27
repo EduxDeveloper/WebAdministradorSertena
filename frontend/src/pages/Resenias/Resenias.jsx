@@ -21,7 +21,7 @@ export default function Resenias() {
     loadResenias()
   }, [page, limit])
 
-  const loadResenias = async () => {
+  async function loadResenias() {
     try {
       setLoading(true)
       const data = await fetchApi(`/reviews/paginado?page=${page}&limit=${limit}`)
@@ -87,7 +87,6 @@ export default function Resenias() {
 
   // Contar reseñas por estrellas
   const reseniasTotales = resenias.length
-  const reseniasPositivas = resenias.filter(r => r.rating >= 4).length
 
   // Calcular porcentaje de incremento (dummy)
   const incrementoMensual = "+12%"
@@ -113,6 +112,11 @@ export default function Resenias() {
         ))}
       </div>
     )
+  }
+
+  const getCustomerName = (customer) => {
+    if (!customer || typeof customer === "string") return "Cliente eliminado"
+    return customer.nombre || customer.name || "Cliente sin nombre"
   }
 
   return (
@@ -256,7 +260,7 @@ export default function Resenias() {
                       key={resenia._id}
                       className="hover:bg-white/[0.03] transition-colors duration-200"
                     >
-                      <td className="px-6 py-5 text-sm font-medium text-white/90">{resenia.idCustomer || "Cliente Anónimo"}</td>
+                      <td className="px-6 py-5 text-sm font-medium text-white/90">{getCustomerName(resenia.idCustomer)}</td>
                       <td className="px-6 py-5 text-sm">
                         {renderStars(resenia.rating)}
                       </td>
