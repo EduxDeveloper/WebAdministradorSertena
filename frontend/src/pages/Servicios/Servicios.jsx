@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
 import Swal from "sweetalert2"
+import ViewModeToggle from "../../components/ui/ViewModeToggle"
 
 /**
  * Pagina del Catalogo de Servicios - Muestra tarjetas de servicios con imagen,
@@ -15,6 +16,7 @@ export default function Servicios() {
   
   const [servicios, setServicios] = useState([])
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState("cards")
   const { fetchApi } = useAuth()
 
   // Estado del formulario del modal
@@ -27,11 +29,6 @@ export default function Servicios() {
     activo: true,
   })
 
-  // Cargar servicios al montar
-  useEffect(() => {
-    loadServicios()
-  }, [])
-
   const loadServicios = async () => {
     try {
       setLoading(true)
@@ -43,6 +40,11 @@ export default function Servicios() {
       setLoading(false)
     }
   }
+
+  // Cargar servicios al montar
+  useEffect(() => {
+    loadServicios()
+  }, [])
 
   // Manejo de drag and drop para la imagen
   const handleDrag = (e) => {
@@ -268,8 +270,12 @@ export default function Servicios() {
           </button>
         </div>
 
+        <div className="flex justify-end">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+        </div>
+
         {/* Grid de tarjetas de servicios */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full">
+        <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full ${viewMode === "cards" ? "" : "hidden"}`}>
           {loading ? (
             <div className="col-span-full text-center text-white/50">Cargando servicios...</div>
           ) : servicios.length === 0 ? (
@@ -366,6 +372,35 @@ export default function Servicios() {
             ))
           )}
         </div>
+
+        {viewMode === "list" && (
+          <div className="rounded-2xl overflow-hidden w-full border border-white/10" style={{ background: "rgba(255,255,255,0.03)" }}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="px-6 py-4 text-xs text-white/70">Servicio</th>
+                    <th className="px-6 py-4 text-xs text-white/70">Descripción</th>
+                    <th className="px-6 py-4 text-xs text-white/70">Precio</th>
+                    <th className="px-6 py-4 text-xs text-white/70">Estado</th>
+                    <th className="px-6 py-4 text-xs text-white/70 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {loading ? <tr><td colSpan="5" className="p-6 text-center text-white/50">Cargando servicios...</td></tr> : servicios.length === 0 ? <tr><td colSpan="5" className="p-6 text-center text-white/50">No hay servicios registrados</td></tr> : servicios.map((servicio) => (
+                    <tr key={servicio._id} className="hover:bg-white/[0.03]">
+                      <td className="px-6 py-4"><div className="flex items-center gap-3"><img src={servicio.imgUrl} alt="" className="w-10 h-10 rounded-lg object-cover" /><span className="font-semibold text-white">{servicio.nameService}</span></div></td>
+                      <td className="px-6 py-4 text-sm text-white/60 max-w-xs truncate">{servicio.description}</td>
+                      <td className="px-6 py-4 text-emerald-300 font-semibold">${servicio.price}</td>
+                      <td className="px-6 py-4"><span className={`text-xs font-semibold ${servicio.status !== false ? "text-emerald-300" : "text-red-300"}`}>{servicio.status !== false ? "Activo" : "Inactivo"}</span></td>
+                      <td className="px-6 py-4 text-right space-x-2"><button onClick={() => handleEditServicio(servicio)} className="text-sm text-blue-300 hover:text-blue-200">Editar</button><button onClick={() => handleDeleteServicio(servicio._id)} className="text-sm text-red-300 hover:text-red-200">Eliminar</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* MODAL: Agregar Nuevo Servicio */}

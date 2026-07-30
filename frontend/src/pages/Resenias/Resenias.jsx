@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
 import Swal from 'sweetalert2'
+import ViewModeToggle from "../../components/ui/ViewModeToggle"
 
 /**
  * Pagina de Gestión de Reseñas - Muestra las reseñas de clientes sobre servicios
@@ -14,6 +15,7 @@ export default function Resenias() {
   const [limit, setLimit] = useState(4)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [viewMode, setViewMode] = useState("list")
   const { fetchApi } = useAuth()
 
   // Cargar reseñas al montar y cuando cambie pagina/limite
@@ -225,9 +227,13 @@ export default function Resenias() {
           </div>
         </div>
 
+        <div className="flex justify-end">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+        </div>
+
         {/* Tabla de reseñas */}
         <div
-          className="rounded-2xl overflow-hidden w-full"
+          className={`rounded-2xl overflow-hidden w-full ${viewMode === "list" ? "" : "hidden"}`}
           style={{
             background: "rgba(255, 255, 255, 0.03)",
             backdropFilter: "blur(20px)",
@@ -292,6 +298,27 @@ export default function Resenias() {
             </table>
           </div>
         </div>
+
+        {viewMode === "cards" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
+            {loading ? (
+              <p className="col-span-full py-8 text-center text-white/50">Cargando reseñas...</p>
+            ) : resenias.length === 0 ? (
+              <p className="col-span-full py-8 text-center text-white/50">No hay reseñas registradas</p>
+            ) : resenias.map((resenia) => (
+              <article key={resenia._id} className="rounded-2xl p-5 border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-white">{getCustomerName(resenia.idCustomer)}</h3>
+                    <div className="mt-2">{renderStars(resenia.rating)}</div>
+                  </div>
+                  <button onClick={() => handleDeleteResenia(resenia._id)} className="rounded-lg px-3 py-2 text-xs font-semibold text-red-300 bg-red-500/10 hover:bg-red-500/20">Eliminar</button>
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-white/65">{resenia.comment || "Sin comentario"}</p>
+              </article>
+            ))}
+          </div>
+        )}
 
         {/* Paginación */}
         <div className="flex items-center justify-between w-full mt-2 text-sm text-white/70 px-2">

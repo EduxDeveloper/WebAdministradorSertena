@@ -11,6 +11,7 @@ import Swal from "sweetalert2"
  */
 export default function Sidebar({ activeTab = "Inicio" }) {
   const [showDropdown, setShowDropdown] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
   const { logout } = useAuth()
 
@@ -82,6 +83,7 @@ export default function Sidebar({ activeTab = "Inicio" }) {
   // Maneja la navegacion al hacer click en un elemento del menu
   const handleMenuClick = (item) => {
     if (item.route) {
+      setIsMobileMenuOpen(false)
       navigate(item.route)
     }
   }
@@ -108,15 +110,46 @@ export default function Sidebar({ activeTab = "Inicio" }) {
   }
 
   return (
+    <>
+      <button
+        type="button"
+        onClick={() => setIsMobileMenuOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-40 w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-lg"
+        style={{ background: "rgba(0, 26, 26, 0.95)", border: "1px solid rgba(255,255,255,0.15)" }}
+        aria-label="Abrir menú de navegación"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="18" x2="20" y2="18" />
+        </svg>
+      </button>
+
+      {isMobileMenuOpen && (
+        <button
+          type="button"
+          className="lg:hidden fixed inset-0 z-40 bg-black/60"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-label="Cerrar menú de navegación"
+        />
+      )}
+
     <aside
-      className="w-[260px] shrink-0 sticky top-0 h-screen overflow-y-auto flex flex-col justify-between p-5 border-r border-white/10"
+      className={`${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} fixed inset-y-0 left-0 z-50 w-[280px] overflow-y-auto flex flex-col justify-between p-5 border-r border-white/10 transition-transform duration-300 lg:sticky lg:top-0 lg:z-auto lg:w-[260px] lg:h-screen lg:shrink-0 lg:translate-x-0`}
       style={{
         background: "rgba(0, 20, 20, 0.45)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
-        zIndex: 15,
       }}
     >
+      <button
+        type="button"
+        onClick={() => setIsMobileMenuOpen(false)}
+        className="lg:hidden absolute top-4 right-4 w-9 h-9 rounded-lg text-white/80 hover:bg-white/10"
+        aria-label="Cerrar menú"
+      >
+        ✕
+      </button>
       <div>
         {/* Logotipo */}
         <div className="mb-10 px-2">
@@ -204,5 +237,6 @@ export default function Sidebar({ activeTab = "Inicio" }) {
         </button>
       </div>
     </aside>
+    </>
   )
 }

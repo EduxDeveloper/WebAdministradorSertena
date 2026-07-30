@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
 import Swal from 'sweetalert2'
+import ViewModeToggle from "../../components/ui/ViewModeToggle"
 
 /**
  * Pagina del Catalogo de Clientes - Muestra una tabla con la informacion de los clientes
@@ -20,6 +21,7 @@ export default function Clientes() {
   const [limit, setLimit] = useState(5)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [viewMode, setViewMode] = useState("list")
   const { fetchApi } = useAuth()
 
   // Estado del formulario del modal para agregar un nuevo cliente
@@ -34,11 +36,6 @@ export default function Clientes() {
   // Errores de validacion por campo y error general de la API
   const [errors, setErrors] = useState({})
   const [apiError, setApiError] = useState("")
-
-  // Cargar clientes al montar el componente
-  useEffect(() => {
-    loadClientes()
-  }, [page, limit])
 
   const loadClientes = async () => {
     try {
@@ -57,6 +54,11 @@ export default function Clientes() {
       setLoading(false)
     }
   }
+
+  // Cargar clientes al montar el componente y al cambiar la paginacion
+  useEffect(() => {
+    loadClientes()
+  }, [page, limit])
 
   // Valida los campos del formulario. Devuelve true si todo es valido
   // y en caso contrario carga el estado `errors` con los mensajes por campo.
@@ -206,9 +208,13 @@ export default function Clientes() {
           </button>
         </div>
 
+        <div className="flex justify-end">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+        </div>
+
         {/* Tabla de clientes */}
         <div
-          className="rounded-2xl overflow-hidden w-full"
+          className={`rounded-2xl overflow-hidden w-full ${viewMode === "list" ? "" : "hidden"}`}
           style={{
             background: "rgba(255, 255, 255, 0.03)",
             backdropFilter: "blur(20px)",
@@ -271,6 +277,27 @@ export default function Clientes() {
             </table>
           </div>
         </div>
+
+        {viewMode === "cards" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
+            {loading ? (
+              <p className="col-span-full py-8 text-center text-white/50">Cargando clientes...</p>
+            ) : clientes.length === 0 ? (
+              <p className="col-span-full py-8 text-center text-white/50">No hay clientes registrados</p>
+            ) : clientes.map((cliente) => (
+              <article key={cliente._id} className="rounded-2xl p-5 border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <div className="flex justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-white truncate">{cliente.nombre}</h3>
+                    <p className="text-sm text-white/60 mt-1 break-all">{cliente.email}</p>
+                  </div>
+                  <button onClick={() => handleDeleteCliente(cliente._id)} className="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold text-red-300 bg-red-500/10 hover:bg-red-500/20">Eliminar</button>
+                </div>
+                <p className="mt-4 text-sm text-white/50">Tipo: <span className="capitalize text-white/80">{cliente.tipo || "No especificado"}</span></p>
+              </article>
+            ))}
+          </div>
+        )}
 
         {/* Paginación */}
         <div className="flex items-center justify-between w-full mt-2 text-sm text-white/70 px-2">

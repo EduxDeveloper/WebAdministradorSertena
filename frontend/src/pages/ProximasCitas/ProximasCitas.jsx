@@ -42,6 +42,12 @@ const formatCitaRange = (dateStart, dateEnd) => {
   return start === end || !end ? start : `${start} - ${end}`
 }
 
+const getStatusColors = (status) => {
+  if (status === "Finalizado") return { background: "rgba(34, 197, 94, 0.2)", color: "#22c55e", solid: "#22c55e" }
+  if (status === "Atrasado") return { background: "rgba(239, 68, 68, 0.2)", color: "#ef4444", solid: "#ef4444" }
+  return { background: "rgba(59, 130, 246, 0.2)", color: "#60a5fa", solid: "#3b82f6" }
+}
+
 /**
  * Componente DatePicker personalizado
  */
@@ -201,12 +207,17 @@ export default function ProximasCitas() {
   const [citas, setCitas] = useState([])
   const [empleados, setEmpleados] = useState([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(6)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [viewMode, setViewMode] = useState("list")
   const { fetchApi } = useAuth()
 
   useEffect(() => {
     loadCitas()
     loadEmpleados()
-  }, [])
+  }, [page, limit])
 
   async function loadEmpleados() {
     try {
@@ -220,7 +231,8 @@ export default function ProximasCitas() {
   async function loadCitas() {
     try {
       setLoading(true)
-      const data = await fetchApi("/proyects")
+      const result = await fetchApi(`/proyects/paginado?page=${page}&limit=${limit}`)
+      const data = result?.data || []
       // Mapear los datos del backend a la estructura que espera la UI
       const mappedCitas = (data || []).map(cita => ({
         id: cita._id,
@@ -232,7 +244,9 @@ export default function ProximasCitas() {
         empleado: [cita.idEmpleado?.nombre || cita.idEmpleado?.name, cita.idEmpleado?.apellido || cita.idEmpleado?.lastName].filter(Boolean).join(" ") || "Sin asignar",
         fecha: formatCitaRange(cita.dateStart, cita.dateEnd),
         precio: String(cita.finalPrice || "0"),
-        estado: cita.status || "Pendiente",
+        estado: cita.status === "Pendiente" ? "Programado" : (cita.status || "Programado"),
+        isCompleted: cita.isCompleted === true || cita.status === "Finalizado",
+        completionNotes: cita.completionNotes || "",
         ubicacion: cita.clientLocation || "No especificada",
         direccion: cita.clientDirection || "No especificada",
         telefono: cita.clientPhone || "No especificado",
@@ -242,6 +256,8 @@ export default function ProximasCitas() {
         dateEnd: cita.dateEnd,
       }))
       setCitas(mappedCitas)
+      setTotal(result?.total || 0)
+      setTotalPages(result?.totalPages || 1)
     } catch (error) {
       console.error("Error al cargar citas:", error)
     } finally {
@@ -261,6 +277,9 @@ export default function ProximasCitas() {
     estado: "",
     precioFinal: "",
     idEmpleadoRaw: "",
+    empleadoAsignadoNombre: "",
+    isCompleted: false,
+    completionNotes: "",
   })
 
   // Errores de validacion por campo del formulario de edicion
@@ -317,14 +336,18 @@ export default function ProximasCitas() {
       newErrors.precioFinal = "El precio final debe ser un numero valido mayor o igual a 0."
     }
 
+    if (formData.isCompleted && !formData.completionNotes.trim()) {
+      newErrors.completionNotes = "Las observaciones son obligatorias al finalizar la cita."
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   // Datos quemados de citas
   // Contar citas por estado
-  const citasActivas = citas.length
-  const citasPendientes = citas.filter(c => c.estado === "Pendiente").length
+  const citasActivas = citas.filter(c => c.estado !== "Finalizado").length
+  const citasProgramadas = citas.filter(c => c.estado === "Programado").length
   const citasIngresos = citas.reduce((sum, c) => {
     // Manejar casos donde precio no sea string o no tenga formato válido
     const precioStr = typeof c.precio === 'string' ? c.precio : String(c.precio || "")
@@ -345,6 +368,7 @@ export default function ProximasCitas() {
       idCustomerRaw: cita.idCustomerRaw,
       idServiceRaw: cita.idServiceRaw,
       idEmpleadoRaw: cita.idEmpleadoRaw || "",
+      empleadoAsignadoNombre: cita.empleado,
       nombre: cita.cliente,
       servicio: cita.servicio,
       descripcion: cita.descripcion,
@@ -353,8 +377,10 @@ export default function ProximasCitas() {
       telefono: cita.telefono,
       ubicacion: cita.ubicacion,
       direccion: cita.direccion,
-      estado: cita.estado,
+      estado: cita.isCompleted ? "Programado" : cita.estado,
       precioFinal: cita.precio,
+      isCompleted: cita.isCompleted,
+      completionNotes: cita.completionNotes,
     })
     setErrors({})
     setSelectedCita(cita)
@@ -390,7 +416,9 @@ export default function ProximasCitas() {
         clientLocation: formData.ubicacion,
         clientDirection: formData.direccion || "",
         finalPrice: formData.precioFinal,
-        status: formData.estado,
+        status: formData.isCompleted ? "Finalizado" : formData.estado,
+        isCompleted: formData.isCompleted,
+        completionNotes: formData.completionNotes,
         description: formData.descripcion,
       }
 
@@ -425,6 +453,7 @@ export default function ProximasCitas() {
       (service._id || service) === formData.idServiceRaw
     )
   )
+  const tecnicoActualEnLista = empleadosElegibles.some((empleado) => empleado._id === formData.idEmpleadoRaw)
 
   // Generar calendario dinámico
   const generateCalendar = () => {
@@ -489,7 +518,7 @@ export default function ProximasCitas() {
       <Sidebar activeTab="Proximas citas" />
 
       {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-1 min-w-0 min-h-screen p-8 relative flex flex-col gap-6" style={{ zIndex: 10 }}>
+      <main className="flex-1 min-w-0 min-h-screen p-4 sm:p-6 lg:p-8 relative flex flex-col gap-6" style={{ zIndex: 10 }}>
         {/* Encabezado */}
         <div>
           <div className="text-emerald-400 font-medium text-[15px] mb-1">
@@ -499,12 +528,12 @@ export default function ProximasCitas() {
             Gestión de Citas
           </h1>
           <p className="text-white/40 text-sm">
-            Apartado administrativo de Reseñas
+            Consulta, reasigna y finaliza las citas programadas.
           </p>
         </div>
 
         {/* Tarjetas de estadísticas */}
-        <div className="grid grid-cols-4 gap-4 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4 w-full">
           {/* Tarjeta: Total Citas Activas */}
           <div
             className="rounded-2xl p-6 flex items-center gap-4"
@@ -533,7 +562,7 @@ export default function ProximasCitas() {
             </div>
           </div>
 
-          {/* Tarjeta: Citas Pendientes */}
+          {/* Tarjeta: Citas Programadas */}
           <div
             className="rounded-2xl p-6 flex items-center gap-4"
             style={{
@@ -558,8 +587,8 @@ export default function ProximasCitas() {
               </svg>
             </div>
             <div>
-              <p className="text-white/50 text-xs font-medium">Citas Pendientes</p>
-              <p className="text-2xl font-bold text-white">{citasPendientes}</p>
+              <p className="text-white/50 text-xs font-medium">Citas Programadas</p>
+              <p className="text-2xl font-bold text-white">{citasProgramadas}</p>
             </div>
           </div>
 
@@ -610,12 +639,13 @@ export default function ProximasCitas() {
         </div>
 
         {/* Contenedor principal con tabla y calendario */}
-        <div className="grid grid-cols-3 gap-6 flex-1">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1">
           {/* Tabla de citas */}
-          <div className="col-span-2">
+          <div className="xl:col-span-2">
             {/* Filtros */}
-            <div className="flex gap-2 mb-4">
-              {["Todas", "Pendiente", "Programado"].map((status) => (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="flex flex-wrap gap-2">
+                {["Todas", "Programado", "Finalizado", "Atrasado"].map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilterStatus(status)}
@@ -627,9 +657,27 @@ export default function ProximasCitas() {
                 >
                   {status}
                 </button>
-              ))}
+                ))}
+              </div>
+              <div className="inline-flex rounded-xl overflow-hidden border border-white/10 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  className={`px-3 py-2 text-xs font-semibold ${viewMode === "list" ? "bg-emerald-500 text-white" : "bg-white/10 text-white/60"}`}
+                >
+                  Lista
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("cards")}
+                  className={`px-3 py-2 text-xs font-semibold ${viewMode === "cards" ? "bg-emerald-500 text-white" : "bg-white/10 text-white/60"}`}
+                >
+                  Tarjetas
+                </button>
+              </div>
             </div>
 
+            {viewMode === "list" ? (
             <div
               className="rounded-2xl overflow-hidden w-full"
               style={{
@@ -678,8 +726,8 @@ export default function ProximasCitas() {
                               <span
                                 className="text-xs px-2 py-1 rounded-full inline-block mt-1"
                                 style={{
-                                  background: cita.estado === "Pendiente" ? "rgba(239, 68, 68, 0.2)" : "rgba(34, 197, 94, 0.2)",
-                                  color: cita.estado === "Pendiente" ? "#ef4444" : "#22c55e",
+                                  background: getStatusColors(cita.estado).background,
+                                  color: getStatusColors(cita.estado).color,
                                 }}
                               >
                                 {cita.estado}
@@ -721,6 +769,57 @@ export default function ProximasCitas() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {loading ? (
+                  <p className="col-span-full py-8 text-center text-white/50">Cargando citas...</p>
+                ) : citasFiltradas.length === 0 ? (
+                  <p className="col-span-full py-8 text-center text-white/50">No hay citas registradas</p>
+                ) : (
+                  citasFiltradas.map((cita) => (
+                    <article key={cita.id} className="rounded-2xl p-5 border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-bold text-white">{cita.servicio}</h3>
+                          <p className="text-sm text-white/60 mt-1">{cita.cliente}</p>
+                        </div>
+                        <span className="text-xs px-2 py-1 rounded-full shrink-0" style={{ background: getStatusColors(cita.estado).background, color: getStatusColors(cita.estado).color }}>{cita.estado}</span>
+                      </div>
+                      <div className="mt-4 space-y-1.5 text-sm text-white/65">
+                        <p>Fecha: {cita.fecha}</p>
+                        <p>Técnico: {cita.empleado}</p>
+                        <p>Precio: {cita.precio}</p>
+                      </div>
+                      <div className="flex gap-2 mt-5">
+                        <button onClick={() => handleOpenDetails(cita)} className="flex-1 rounded-xl py-2 text-sm font-semibold bg-white/10 hover:bg-white/15">Ver</button>
+                        <button onClick={() => handleOpenEdit(cita)} className="flex-1 rounded-xl py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-white">Editar</button>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            )}
+
+            <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-white/70">
+              <div className="flex items-center gap-2">
+                <span>Mostrar</span>
+                <select
+                  value={limit}
+                  onChange={(event) => { setLimit(Number(event.target.value)); setPage(1) }}
+                  className="rounded-lg bg-white/10 border border-white/20 px-2 py-1 text-white outline-none"
+                >
+                  <option value={6} className="text-black">6</option>
+                  <option value={12} className="text-black">12</option>
+                  <option value={24} className="text-black">24</option>
+                </select>
+                <span>de {total} citas</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} className="px-3 py-1.5 rounded-lg bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
+                <span>Página {page} de {totalPages}</span>
+                <button onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page >= totalPages} className="px-3 py-1.5 rounded-lg bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed">Siguiente</button>
               </div>
             </div>
           </div>
@@ -865,10 +964,8 @@ export default function ProximasCitas() {
                       className="p-4 rounded-lg border-l-4 transition-all duration-200 hover:scale-105 cursor-pointer"
                       onClick={() => handleOpenDetails(cita)}
                       style={{
-                        background: cita.estado === "Pendiente" 
-                          ? "rgba(239, 68, 68, 0.1)"
-                          : "rgba(34, 197, 94, 0.1)",
-                        borderColor: cita.estado === "Pendiente" ? "#ef4444" : "#22c55e",
+                        background: getStatusColors(cita.estado).background,
+                        borderColor: getStatusColors(cita.estado).solid,
                       }}
                     >
                       <p className="text-xs text-white/80 font-semibold mb-2">{cita.servicio}</p>
@@ -878,7 +975,7 @@ export default function ProximasCitas() {
                         <span
                           className="text-xs px-2 py-1 rounded font-semibold"
                           style={{
-                            background: cita.estado === "Pendiente" ? "#ef4444" : "#22c55e",
+                            background: getStatusColors(cita.estado).solid,
                             color: "white",
                           }}
                         >
@@ -927,7 +1024,7 @@ export default function ProximasCitas() {
 
           {/* Contenido del modal */}
           <div
-            className="relative w-full max-w-[600px] rounded-2xl p-8 max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-[600px] rounded-2xl p-5 sm:p-8 max-h-[90vh] overflow-y-auto"
             style={{
               background: "linear-gradient(135deg, rgba(200, 200, 210, 0.85) 0%, rgba(180, 180, 195, 0.80) 100%)",
               backdropFilter: "blur(40px)",
@@ -955,7 +1052,7 @@ export default function ProximasCitas() {
             </div>
 
             {/* Fechas */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div
                 className="p-4 rounded-lg"
                 style={{
@@ -1026,6 +1123,16 @@ export default function ProximasCitas() {
               <p className="text-sm text-gray-700 leading-relaxed">{selectedCita.descripcion}</p>
             </div>
 
+            {selectedCita.isCompleted && (
+              <div
+                className="p-4 rounded-lg mb-6"
+                style={{ background: "rgba(34, 197, 94, 0.12)", border: "1px solid rgba(34, 197, 94, 0.3)" }}
+              >
+                <h3 className="font-bold text-gray-900 mb-2">Observaciones de finalización</h3>
+                <p className="text-sm text-gray-700 leading-relaxed">{selectedCita.completionNotes || "Sin observaciones registradas."}</p>
+              </div>
+            )}
+
             {/* Botones de acción */}
             <div className="flex items-center justify-between gap-3">
               <button
@@ -1067,7 +1174,7 @@ export default function ProximasCitas() {
 
           {/* Contenido del modal */}
           <div
-            className="relative w-full max-w-[620px] rounded-2xl p-8 max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-[620px] rounded-2xl p-5 sm:p-8 max-h-[90vh] overflow-y-auto"
             style={{
               background: "linear-gradient(135deg, rgba(200, 200, 210, 0.85) 0%, rgba(180, 180, 195, 0.80) 100%)",
               backdropFilter: "blur(40px)",
@@ -1091,7 +1198,7 @@ export default function ProximasCitas() {
             </div>
 
             {/* Fila: Nombre y Servicio */}
-            <div className="grid grid-cols-2 gap-4 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Nombre</label>
                 <input
@@ -1135,6 +1242,9 @@ export default function ProximasCitas() {
                 style={{ background: "rgba(255,255,255,0.5)", border: "1px solid rgba(0,0,0,0.1)" }}
               >
                 <option value="">Sin asignar</option>
+                {formData.idEmpleadoRaw && !tecnicoActualEnLista && (
+                  <option value={formData.idEmpleadoRaw}>{formData.empleadoAsignadoNombre || "Técnico asignado"}</option>
+                )}
                 {empleadosElegibles.map((empleado) => (
                   <option key={empleado._id} value={empleado._id}>
                     {[empleado.nombre || empleado.name, empleado.apellido || empleado.lastName].filter(Boolean).join(" ")}
@@ -1159,7 +1269,7 @@ export default function ProximasCitas() {
             </div>
 
             {/* Fechas con DatePicker */}
-            <div className="grid grid-cols-2 gap-4 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
               <DatePicker
                 value={formData.inicio}
                 onChange={(date) => handleFieldChange("inicio", date)}
@@ -1175,7 +1285,7 @@ export default function ProximasCitas() {
             </div>
 
             {/* Teléfono y Ubicación */}
-            <div className="grid grid-cols-2 gap-4 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Teléfono</label>
                 <input
@@ -1222,21 +1332,21 @@ export default function ProximasCitas() {
             </div>
 
             {/* Estado y Precio */}
-            <div className="grid grid-cols-2 gap-4 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Estado</label>
                 <select
                   value={formData.estado}
+                  disabled={formData.isCompleted}
                   onChange={(e) => handleFieldChange("estado", e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
+                  className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     background: "rgba(255,255,255,0.5)",
                     border: "1px solid rgba(0,0,0,0.1)",
                   }}
                 >
-                  <option value="Pendiente">Pendiente</option>
                   <option value="Programado">Programado</option>
-                  <option value="Completado">Completado</option>
+                  <option value="Atrasado">Atrasado</option>
                 </select>
               </div>
               <div>
@@ -1257,11 +1367,42 @@ export default function ProximasCitas() {
               </div>
             </div>
 
+            <div className="mb-5 rounded-xl p-4" style={{ background: "rgba(34, 197, 94, 0.10)", border: "1px solid rgba(34, 197, 94, 0.25)" }}>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isCompleted}
+                  onChange={(e) => {
+                    const isCompleted = e.target.checked
+                    setFormData((prev) => ({ ...prev, isCompleted, estado: "Programado" }))
+                    setErrors((prev) => ({ ...prev, completionNotes: undefined }))
+                  }}
+                  className="h-5 w-5 accent-emerald-500"
+                />
+                <span className="text-sm font-bold text-gray-900">Cita finalizada</span>
+              </label>
+              <p className="text-xs text-gray-600 mt-1 ml-8">Marca esta opción cuando el servicio se haya realizado.</p>
+
+              {formData.isCompleted && (
+                <div className="mt-4">
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">Observaciones de la cita</label>
+                  <textarea
+                    value={formData.completionNotes}
+                    onChange={(e) => handleFieldChange("completionNotes", e.target.value)}
+                    placeholder="Describe lo realizado, novedades o recomendaciones para el cliente."
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400 resize-y min-h-24"
+                    style={{ background: "rgba(255,255,255,0.65)", border: errors.completionNotes ? "1px solid rgba(239, 68, 68, 0.7)" : "1px solid rgba(0,0,0,0.1)" }}
+                  />
+                  {errors.completionNotes && <p className="text-red-500 text-xs mt-1">{errors.completionNotes}</p>}
+                </div>
+              )}
+            </div>
+
             {/* Separador */}
             <div className="border-t border-black/10 mb-6" />
 
             {/* Botones de accion */}
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3">
               <button
                 onClick={handleCloseModal}
                 className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-black/10"

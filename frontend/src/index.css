@@ -177,3 +177,35 @@ body {
 .animate-fade-in-up {
   animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
+/* Navegación y contenido administrativo en tabletas y teléfonos. */
+@media (max-width: 1023px) {
+  main {
+    padding-top: 5.5rem !important;
+  }
+
+  main .grid.grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  main .grid.grid-cols-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  main .col-span-2 {
+    grid-column: span 1 / span 1;
+  }
+}
+
+@media (max-width: 639px) {
+  main {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  main .grid.grid-cols-4,
+  main .grid.grid-cols-3,
+  main .grid.grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -206,7 +206,7 @@ export default function Dashboard() {
     ventasSemanales: 0,
     reseniasPromedio: "0.0",
     reseniasTotal: 0,
-    citasPendientes: 0,
+    citasProgramadas: 0,
     proximasCitas: [],
     serviciosPopulares: []
   })
@@ -239,7 +239,7 @@ export default function Dashboard() {
         reviewsResult.status === "fulfilled" ? reviewsResult.value : []
       ).filter(r => r && typeof r === "object")
 
-      const citasPendientes = validProyects.filter(p => p.status === "Pendiente").length
+      const citasProgramadas = validProyects.filter(p => p.status === "Programado").length
 
       const ventasSemanales = validProyects.reduce((sum, p) => sum + parsePrice(p.finalPrice), 0)
 
@@ -249,7 +249,7 @@ export default function Dashboard() {
         : "0.0"
 
       const proximasCitas = validProyects
-        .filter(p => p.status !== "Completado")
+        .filter(p => p.status !== "Finalizado")
         .slice(0, 5)
         .map(p => ({
           title: p.idService?.nameService || (typeof p.idService === 'string' ? p.idService : "Servicio Programado"),
@@ -283,7 +283,7 @@ export default function Dashboard() {
         ventasSemanales,
         reseniasPromedio,
         reseniasTotal,
-        citasPendientes,
+        citasProgramadas,
         proximasCitas,
         serviciosPopulares
       })
@@ -454,7 +454,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Tarjeta 3: Citas Pendientes */}
+                  {/* Tarjeta 3: Citas Programadas */}
                   <div
                     className="rounded-3xl p-8 flex flex-col justify-between relative overflow-hidden transition-all duration-300 hover:scale-[1.01] min-h-[170px]"
                     style={{
@@ -485,9 +485,9 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <div className="text-white/40 text-[12px] font-semibold tracking-wider uppercase mb-1">
-                        CITAS PENDIENTES
+                        CITAS PROGRAMADAS
                       </div>
-                      <div className="text-3xl font-bold tracking-tight text-white mb-0.5">{stats.citasPendientes}</div>
+                      <div className="text-3xl font-bold tracking-tight text-white mb-0.5">{stats.citasProgramadas}</div>
                       <div className="text-[12px] text-white/30">Total actual</div>
                     </div>
                   </div>

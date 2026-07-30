@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
 import Swal from 'sweetalert2'
+import ViewModeToggle from "../../components/ui/ViewModeToggle"
 
 /**
  * Pagina de Gestión de Empleados - Muestra una tabla con la información de los empleados
@@ -22,6 +23,7 @@ export default function Empleados() {
   const [limit, setLimit] = useState(4)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [viewMode, setViewMode] = useState("list")
   const { fetchApi } = useAuth()
 
   // Estado del formulario del modal para agregar un nuevo empleado
@@ -336,9 +338,13 @@ export default function Empleados() {
           </div>
         </div>
 
+        <div className="flex justify-end">
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+        </div>
+
         {/* Tabla de empleados */}
         <div
-          className="rounded-2xl overflow-hidden w-full"
+          className={`rounded-2xl overflow-hidden w-full ${viewMode === "list" ? "" : "hidden"}`}
           style={{
             background: "rgba(255, 255, 255, 0.03)",
             backdropFilter: "blur(20px)",
@@ -530,6 +536,39 @@ export default function Empleados() {
             </table>
           </div>
         </div>
+
+        {viewMode === "cards" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
+            {loading ? (
+              <p className="col-span-full py-8 text-center text-white/50">Cargando empleados...</p>
+            ) : empleados.length === 0 ? (
+              <p className="col-span-full py-8 text-center text-white/50">No hay empleados registrados</p>
+            ) : empleados.map((empleado) => {
+              const estaActivo = empleado.status === true
+              return (
+                <article key={empleado._id} className="rounded-2xl p-5 border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-white truncate">{empleado.nombre} {empleado.apellido}</h3>
+                      <p className="text-sm text-white/60 mt-1 break-all">{empleado.email}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full px-2 py-1 text-xs font-semibold" style={{ background: estaActivo ? "rgba(16,185,129,0.2)" : "rgba(107,114,128,0.2)", color: estaActivo ? "#34d399" : "#d1d5db" }}>{estaActivo ? "Activo" : "Inactivo"}</span>
+                  </div>
+                  <p className="mt-3 text-sm text-white/60">Salario: <span className="text-white">${empleado.salario}</span></p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {(empleado.services || []).length > 0 ? empleado.services.map((service) => (
+                      <span key={service._id || service} className="rounded-md px-2 py-1 text-xs bg-emerald-500/10 text-emerald-300">{service.nameService || "Servicio"}</span>
+                    )) : <span className="text-xs text-white/40">Sin servicios asignados</span>}
+                  </div>
+                  <div className="mt-5 flex gap-2">
+                    <button onClick={() => handleOpenEdit(empleado)} className="flex-1 rounded-xl py-2 text-sm font-semibold bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">Editar</button>
+                    <button onClick={() => handleDeleteEmpleado(empleado._id)} className="flex-1 rounded-xl py-2 text-sm font-semibold bg-red-500/10 text-red-300 hover:bg-red-500/20">Eliminar</button>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
 
         {/* Paginación */}
         <div className="flex items-center justify-between w-full mt-2 text-sm text-white/70 px-2">
