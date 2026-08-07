@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
 import Swal from "sweetalert2"
+import { CardsLoadingGrid, TableLoadingRows } from "../../components/ui/LoadingSkeleton"
 
 // Nombres cortos de mes (es-ES) generados con la misma API que usa el DatePicker,
 // para poder parsear de vuelta el string que produce (ej. "05 oct - 2026")
@@ -15,6 +16,12 @@ const MESES_CORTOS = Array.from({ length: 12 }, (_, i) =>
 const parseCitaDate = (value) => {
   if (!value || !String(value).trim()) return null
 
+  const nativeDateMatch = String(value).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (nativeDateMatch) {
+    const [, year, month, day] = nativeDateMatch
+    return new Date(Number(year), Number(month) - 1, Number(day))
+  }
+
   const match = String(value).trim().match(/^(\d{1,2})\s+([a-záéíóúñ.]+)\s*-\s*(\d{4})$/i)
   if (match) {
     const [, dia, mesTexto, anio] = match
@@ -26,6 +33,16 @@ const parseCitaDate = (value) => {
 
   const nativo = new Date(value)
   return Number.isNaN(nativo.getTime()) ? null : nativo
+}
+
+const isSameCitaDay = (firstValue, secondValue) => {
+  const firstDate = parseCitaDate(firstValue)
+  const secondDate = parseCitaDate(secondValue)
+  if (!firstDate || !secondDate) return false
+
+  return firstDate.getFullYear() === secondDate.getFullYear()
+    && firstDate.getMonth() === secondDate.getMonth()
+    && firstDate.getDate() === secondDate.getDate()
 }
 
 const formatCitaDate = (value) => {
@@ -48,10 +65,24 @@ const getStatusColors = (status) => {
   return { background: "rgba(59, 130, 246, 0.2)", color: "#60a5fa", solid: "#3b82f6" }
 }
 
+const getGoogleMapsUrl = (coordinates, mapUrl) => {
+  if (coordinates?.latitude !== undefined && coordinates?.longitude !== undefined) {
+    return `https://www.google.com/maps?q=${coordinates.latitude},${coordinates.longitude}`
+  }
+  return mapUrl || ""
+}
+
+const getWazeUrl = (coordinates) => {
+  if (coordinates?.latitude === undefined || coordinates?.longitude === undefined) return ""
+  return `https://www.waze.com/ul?ll=${coordinates.latitude}%2C${coordinates.longitude}&navigate=yes`
+}
+
 /**
  * Componente DatePicker personalizado
  */
-function DatePicker({ value, onChange, label, error }) {
+// Se conserva temporalmente para no alterar el calendario de consulta de esta página.
+// eslint-disable-next-line no-unused-vars
+function LegacyDatePicker({ value, onChange, label, error }) {
   const [showPicker, setShowPicker] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 9)) // Octubre 2026
 
@@ -196,6 +227,54 @@ function DatePicker({ value, onChange, label, error }) {
  * Pagina de Gestión de Citas - Muestra las citas próximas con detalles,
  * calendario, y permite ver detalles, editar y gestionar citas.
  */
+const toDateInputValue = (value) => {
+  const date = parseCitaDate(value)
+  if (!date) return ""
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+function DatePicker({ value, onChange, label, error }) {
+  const [weekendError, setWeekendError] = useState("")
+
+  const handleChange = (event) => {
+    const nextValue = event.target.value
+    const selectedDate = parseCitaDate(nextValue)
+
+    if (selectedDate && (selectedDate.getDay() === 0 || selectedDate.getDay() === 6)) {
+      setWeekendError("No se puede programar trabajo en sábado o domingo.")
+      return
+    }
+
+    setWeekendError("")
+    onChange(nextValue)
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+        </svg>
+        {label}
+      </label>
+      <input
+        type="date"
+        value={toDateInputValue(value)}
+        onChange={handleChange}
+        className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
+        style={{
+          background: "rgba(255,255,255,0.5)",
+          border: error || weekendError ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
+        }}
+      />
+      {(error || weekendError) && <p className="text-red-400 text-xs mt-1">{error || weekendError}</p>}
+    </div>
+  )
+}
+
 export default function ProximasCitas() {
   const [showModal, setShowModal] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
@@ -249,6 +328,8 @@ export default function ProximasCitas() {
         completionNotes: cita.completionNotes || "",
         ubicacion: cita.clientLocation || "No especificada",
         direccion: cita.clientDirection || "No especificada",
+        coordinates: cita.clientCoordinates || null,
+        mapUrl: cita.clientMapUrl || "",
         telefono: cita.clientPhone || "No especificado",
         descripcion: cita.description || "Sin descripción",
         // Guardamos los originales para editar
@@ -272,6 +353,8 @@ export default function ProximasCitas() {
     descripcion: "",
     inicio: "",
     fin: "",
+    originalInicio: "",
+    originalFin: "",
     telefono: "",
     ubicacion: "",
     estado: "",
@@ -318,7 +401,9 @@ export default function ProximasCitas() {
       if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
         newErrors.fin = "La fecha de fin no puede ser anterior a la fecha de inicio."
       }
-      if ((fechaInicio && (fechaInicio.getDay() === 0 || fechaInicio.getDay() === 6)) || (fechaFin && (fechaFin.getDay() === 0 || fechaFin.getDay() === 6))) {
+      const datesChanged = !isSameCitaDay(formData.inicio, formData.originalInicio)
+        || !isSameCitaDay(formData.fin, formData.originalFin)
+      if (datesChanged && ((fechaInicio && (fechaInicio.getDay() === 0 || fechaInicio.getDay() === 6)) || (fechaFin && (fechaFin.getDay() === 0 || fechaFin.getDay() === 6)))) {
         newErrors.inicio = "No se puede programar trabajo en sábado o domingo."
       }
     }
@@ -372,8 +457,10 @@ export default function ProximasCitas() {
       nombre: cita.cliente,
       servicio: cita.servicio,
       descripcion: cita.descripcion,
-      inicio: formatCitaDate(cita.dateStart),
-      fin: formatCitaDate(cita.dateEnd),
+      inicio: toDateInputValue(cita.dateStart),
+      fin: toDateInputValue(cita.dateEnd),
+      originalInicio: toDateInputValue(cita.dateStart),
+      originalFin: toDateInputValue(cita.dateEnd),
       telefono: cita.telefono,
       ubicacion: cita.ubicacion,
       direccion: cita.direccion,
@@ -699,9 +786,7 @@ export default function ProximasCitas() {
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {loading ? (
-                      <tr>
-                        <td colSpan="4" className="px-6 py-5 text-center text-white/50">Cargando citas...</td>
-                      </tr>
+                      <TableLoadingRows columns={4} />
                     ) : citasFiltradas.length === 0 ? (
                       <tr>
                         <td colSpan="4" className="px-6 py-5 text-center text-white/50">No hay citas registradas</td>
@@ -774,7 +859,7 @@ export default function ProximasCitas() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {loading ? (
-                  <p className="col-span-full py-8 text-center text-white/50">Cargando citas...</p>
+                  <CardsLoadingGrid />
                 ) : citasFiltradas.length === 0 ? (
                   <p className="col-span-full py-8 text-center text-white/50">No hay citas registradas</p>
                 ) : (
@@ -1108,6 +1193,12 @@ export default function ProximasCitas() {
                 <p className="font-medium">{selectedCita.ubicacion}</p>
                 <p className="text-gray-600">{selectedCita.direccion}</p>
                 <p className="text-gray-600">{selectedCita.telefono}</p>
+                {getGoogleMapsUrl(selectedCita.coordinates, selectedCita.mapUrl) && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <a href={getGoogleMapsUrl(selectedCita.coordinates, selectedCita.mapUrl)} target="_blank" rel="noreferrer" className="rounded-lg bg-[#003366] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#002244]">Abrir en Google Maps</a>
+                    {getWazeUrl(selectedCita.coordinates) && <a href={getWazeUrl(selectedCita.coordinates)} target="_blank" rel="noreferrer" className="rounded-lg bg-sky-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-sky-600">Abrir en Waze</a>}
+                  </div>
+                )}
               </div>
             </div>
 

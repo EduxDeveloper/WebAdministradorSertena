@@ -2,7 +2,7 @@
 // BrowserRouter envuelve toda la app para habilitar la navegacion
 // Routes y Route definen las paginas disponibles
 // Navigate permite redirigir al usuario automaticamente
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
 // Importamos cada una de las paginas de la aplicacion
 import Login from './pages/Login/Login'
@@ -15,6 +15,8 @@ import Clientes from './pages/Clientes/Clientes'
 import Empleados from './pages/Empleados/Empleados'
 import Resenias from './pages/Resenias/Resenias'
 import ProximasCitas from './pages/ProximasCitas/ProximasCitas'
+import Configuracion from './pages/Configuracion/Configuracion'
+import { AdminUnknownRoute } from './components/RouteFeedback'
 
 // Ruta protegida: solo deja pasar si el admin esta autenticado
 import PrivateRoute from './components/PrivateRoute'
@@ -39,10 +41,11 @@ function App() {
           <Route path="/empleados" element={<Empleados />} />
           <Route path="/resenias" element={<Resenias />} />
           <Route path="/proximas-citas" element={<ProximasCitas />} />
+          <Route path="/configuracion" element={<Configuracion />} />
         </Route>
 
         {/* Si el usuario pone cualquier otra URL, lo mandamos al login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<AdminUnknownRoute />} />
       </Routes>
     </BrowserRouter>
   )

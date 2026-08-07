@@ -3,6 +3,7 @@ import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
 import Swal from 'sweetalert2'
 import ViewModeToggle from "../../components/ui/ViewModeToggle"
+import { CardsLoadingGrid, TableLoadingRows } from "../../components/ui/LoadingSkeleton"
 
 /**
  * Pagina de Gestión de Reseñas - Muestra las reseñas de clientes sobre servicios
@@ -253,9 +254,7 @@ export default function Resenias() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {loading ? (
-                  <tr>
-                    <td colSpan="4" className="px-6 py-5 text-center text-white/50">Cargando reseñas...</td>
-                  </tr>
+                  <TableLoadingRows columns={4} />
                 ) : resenias.length === 0 ? (
                   <tr>
                     <td colSpan="4" className="px-6 py-5 text-center text-white/50">No hay reseñas registradas</td>
@@ -302,7 +301,7 @@ export default function Resenias() {
         {viewMode === "cards" && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
             {loading ? (
-              <p className="col-span-full py-8 text-center text-white/50">Cargando reseñas...</p>
+              <CardsLoadingGrid />
             ) : resenias.length === 0 ? (
               <p className="col-span-full py-8 text-center text-white/50">No hay reseñas registradas</p>
             ) : resenias.map((resenia) => (

@@ -1,5 +1,6 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
+import { ForbiddenPage } from "./RouteFeedback";
 /**
  * Verificado: rutas del panel admin protegidas correctamente.
  * Prueba manual: acceso directo a /dashboard sin sesión redirige a /login.
@@ -27,7 +28,7 @@ function PrivateRoute() {
   if (loading) return null;
 
   // Si no está autenticado, redirigimos al login
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  return isAuthenticated ? <Outlet /> : <ForbiddenPage />;
 }
 
 export default PrivateRoute;

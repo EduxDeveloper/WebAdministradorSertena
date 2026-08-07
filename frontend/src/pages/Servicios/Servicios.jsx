@@ -3,6 +3,7 @@ import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
 import Swal from "sweetalert2"
 import ViewModeToggle from "../../components/ui/ViewModeToggle"
+import { ServiceCardsLoadingGrid, TableLoadingRows } from "../../components/ui/LoadingSkeleton"
 
 /**
  * Pagina del Catalogo de Servicios - Muestra tarjetas de servicios con imagen,
@@ -277,7 +278,7 @@ export default function Servicios() {
         {/* Grid de tarjetas de servicios */}
         <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full ${viewMode === "cards" ? "" : "hidden"}`}>
           {loading ? (
-            <div className="col-span-full text-center text-white/50">Cargando servicios...</div>
+            <ServiceCardsLoadingGrid />
           ) : servicios.length === 0 ? (
             <div className="col-span-full text-center text-white/50">No hay servicios registrados</div>
           ) : (
@@ -387,7 +388,7 @@ export default function Servicios() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {loading ? <tr><td colSpan="5" className="p-6 text-center text-white/50">Cargando servicios...</td></tr> : servicios.length === 0 ? <tr><td colSpan="5" className="p-6 text-center text-white/50">No hay servicios registrados</td></tr> : servicios.map((servicio) => (
+                  {loading ? <TableLoadingRows columns={5} /> : servicios.length === 0 ? <tr><td colSpan="5" className="p-6 text-center text-white/50">No hay servicios registrados</td></tr> : servicios.map((servicio) => (
                     <tr key={servicio._id} className="hover:bg-white/[0.03]">
                       <td className="px-6 py-4"><div className="flex items-center gap-3"><img src={servicio.imgUrl} alt="" className="w-10 h-10 rounded-lg object-cover" /><span className="font-semibold text-white">{servicio.nameService}</span></div></td>
                       <td className="px-6 py-4 text-sm text-white/60 max-w-xs truncate">{servicio.description}</td>

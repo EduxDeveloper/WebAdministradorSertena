@@ -3,6 +3,7 @@ import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
 import Swal from 'sweetalert2'
 import ViewModeToggle from "../../components/ui/ViewModeToggle"
+import { CardsLoadingGrid, TableLoadingRows } from "../../components/ui/LoadingSkeleton"
 
 /**
  * Pagina del Catalogo de Clientes - Muestra una tabla con la informacion de los clientes
@@ -235,9 +236,7 @@ export default function Clientes() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {loading ? (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-5 text-center text-white/50">Cargando clientes...</td>
-                  </tr>
+                  <TableLoadingRows columns={5} />
                 ) : clientes.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="px-6 py-5 text-center text-white/50">No hay clientes registrados</td>
@@ -281,7 +280,7 @@ export default function Clientes() {
         {viewMode === "cards" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
             {loading ? (
-              <p className="col-span-full py-8 text-center text-white/50">Cargando clientes...</p>
+              <CardsLoadingGrid />
             ) : clientes.length === 0 ? (
               <p className="col-span-full py-8 text-center text-white/50">No hay clientes registrados</p>
             ) : clientes.map((cliente) => (

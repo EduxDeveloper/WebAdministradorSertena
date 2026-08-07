@@ -240,6 +240,10 @@ export function AuthProvider({ children }) {
     }
   }, [persistSession]);
 
+  const updateUser = useCallback((changes) => {
+    persistSession({ ...(user || {}), ...changes });
+  }, [persistSession, user]);
+
   /**
    * Función utilitaria para hacer peticiones al backend adjuntando
    * credenciales y parseando la respuesta JSON automáticamente.
@@ -283,6 +287,7 @@ export function AuthProvider({ children }) {
     isAuthenticated: Boolean(user),
     login,
     logout,
+    updateUser,
     requestRecoveryCode,
     verifyRecoveryCode,
     resetPassword,

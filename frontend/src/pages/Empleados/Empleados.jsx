@@ -3,6 +3,7 @@ import Sidebar from "../../components/ui/Sidebar"
 import useAuth from "../../hooks/useAuth"
 import Swal from 'sweetalert2'
 import ViewModeToggle from "../../components/ui/ViewModeToggle"
+import { CardsLoadingGrid, TableLoadingRows } from "../../components/ui/LoadingSkeleton"
 
 /**
  * Pagina de Gestión de Empleados - Muestra una tabla con la información de los empleados
@@ -367,9 +368,7 @@ export default function Empleados() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {loading ? (
-                  <tr>
-                    <td colSpan="7" className="px-6 py-5 text-center text-white/50">Cargando empleados...</td>
-                  </tr>
+                  <TableLoadingRows columns={7} />
                 ) : empleados.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="px-6 py-5 text-center text-white/50">No hay empleados registrados</td>
@@ -540,7 +539,7 @@ export default function Empleados() {
         {viewMode === "cards" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
             {loading ? (
-              <p className="col-span-full py-8 text-center text-white/50">Cargando empleados...</p>
+              <CardsLoadingGrid />
             ) : empleados.length === 0 ? (
               <p className="col-span-full py-8 text-center text-white/50">No hay empleados registrados</p>
             ) : empleados.map((empleado) => {
