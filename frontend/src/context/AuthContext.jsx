@@ -1,290 +1,237 @@
-import { createContext, useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useState } from "react";
 
-// Creamos el contexto global de autenticación de administrador.
-// Usar contexto evita "prop drilling" (pasar props por muchos niveles).
 const AuthContext = createContext(null);
 
 const API_URL = "http://localhost:4000/api";
-const SESSION_STORAGE_KEY = "sertena:admin-auth-session";
+const SESSION_STORAGE_KEY = "sertena:auth-session";
+const LEGACY_SESSION_STORAGE_KEY = "sertena:admin-auth-session";
+const RECOVERY_ROLE_STORAGE_KEY = "sertena:recovery-role";
 
-/**
- * Lee la sesión guardada en localStorage.
- *
- * ¿Por qué existe esta función?
- * Porque al recargar la página, el estado de React se reinicia.
- * Entonces usamos localStorage para recuperar una sesión mínima.
- *
- * @returns {object|null} Objeto de sesión parseado o null si no existe/está dañado.
- */
 function readStoredSession() {
   try {
-    const storedSession = localStorage.getItem(SESSION_STORAGE_KEY);
-    return storedSession ? JSON.parse(storedSession) : null;
+    const currentSession = localStorage.getItem(SESSION_STORAGE_KEY);
+    const legacySession = localStorage.getItem(LEGACY_SESSION_STORAGE_KEY);
+    const storedSession = currentSession || legacySession;
+    const parsedSession = storedSession ? JSON.parse(storedSession) : null;
+
+    if (!parsedSession?.user) return null;
+
+    // Las sesiones anteriores al soporte de empleados eran siempre de administrador.
+    return {
+      ...parsedSession,
+      user: { ...parsedSession.user, role: parsedSession.user.role || "admin" },
+    };
   } catch {
-    // Buena práctica: si el JSON está corrupto, limpiamos la clave
-    // para evitar errores repetitivos en futuros renders.
     localStorage.removeItem(SESSION_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_SESSION_STORAGE_KEY);
     return null;
   }
 }
 
-/**
- * Proveedor de autenticación para toda la aplicación de administrador.
- *
- * ¿Qué recibe?
- * @param {object} props
- * @param {React.ReactNode} props.children Componentes hijos que usarán el contexto.
- *
- * ¿Qué expone?
- * user, loading, isAuthenticated y funciones de auth (login, logout, recovery).
- */
+async function requestApi(path, options = {}) {
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      credentials: "include",
+    });
+    const payload = await response.json().catch(() => ({}));
+    return { response, payload };
+  } catch (error) {
+    return { error };
+  }
+}
+
+function getErrorMessage(result, fallback) {
+  if (result?.error) return "No se pudo conectar con el servidor";
+  return result?.payload?.message || fallback;
+}
+
 export function AuthProvider({ children }) {
-  // user almacena una versión mínima del admin (email).
-  const [user, setUser] = useState(null);
-  // loading indica si aún estamos recuperando sesión al iniciar la app.
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => readStoredSession()?.user || null);
+  const loading = false;
 
-  /**
-   * Efecto de inicialización.
-   *
-   * ¿Por qué useEffect con []?
-   * Porque queremos ejecutar esta lógica solo una vez al montar el provider.
-   */
-  useEffect(() => {
-    const storedSession = readStoredSession();
-
-    if (storedSession?.user) {
-      setUser(storedSession.user);
-    }
-
-    setLoading(false);
-  }, []);
-
-  /**
-   * Guarda o limpia la sesión en estado + localStorage.
-   *
-   * @param {object|null} nextUser Usuario a persistir o null para cerrar sesión.
-   * @returns {void}
-   *
-   * Tip de buenas prácticas:
-   * Mantener esta lógica en una sola función evita duplicación de código
-   * y reduce errores al sincronizar estado con almacenamiento local.
-   */
   const persistSession = useCallback((nextUser) => {
     if (!nextUser) {
       localStorage.removeItem(SESSION_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_SESSION_STORAGE_KEY);
       setUser(null);
       return;
     }
 
-    const session = {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
       user: nextUser,
       authenticatedAt: new Date().toISOString(),
-    };
-
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    }));
+    localStorage.removeItem(LEGACY_SESSION_STORAGE_KEY);
     setUser(nextUser);
   }, []);
 
-  /**
-   * Inicia sesión del administrador contra el backend.
-   *
-   * @param {{email: string, password: string}} credentials Credenciales del formulario.
-   * @returns {Promise<{ok: boolean, message: string}>} Resultado para la UI.
-   *
-   * Nota:
-   * - Usamos credentials: "include" para permitir envío/recepción de cookies (authAdminCookie).
-   * - Devolvemos un objeto controlado (ok + message) para que la vista
-   *   decida cómo mostrar feedback sin mezclar lógica de red con UI.
-   */
-  const login = useCallback(
-    async ({ email, password }) => {
-      const response = await fetch(`${API_URL}/adminLogin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
+  const login = useCallback(async ({ email, password }) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const adminResult = await requestApi("/adminLogin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: normalizedEmail, password }),
+    });
 
-      const payload = await response.json().catch(() => ({}));
+    if (adminResult.response?.ok) {
+      persistSession({ email: normalizedEmail, role: "admin" });
+      return { ok: true, role: "admin", message: adminResult.payload.message || "Sesión iniciada correctamente" };
+    }
 
-      if (!response.ok) {
-        return {
-          ok: false,
-          message: payload.message || "No se pudo iniciar sesión",
-        };
-      }
+    // Solo se intenta el login de empleado cuando el backend confirma que el correo
+    // no pertenece a un administrador. Una contraseña incorrecta de admin no debe
+    // probarse contra otro tipo de cuenta.
+    const adminNotFound = adminResult.response?.status === 400
+      && adminResult.payload?.message === "Admin not found";
 
-      persistSession({ email });
+    if (!adminNotFound) {
+      return { ok: false, message: getErrorMessage(adminResult, "No se pudo iniciar sesión") };
+    }
 
-      return {
-        ok: true,
-        message: payload.message || "Sesión iniciada correctamente",
-      };
-    },
-    [persistSession],
+    const employeeResult = await requestApi("/loginEmpleado", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: normalizedEmail, password }),
+    });
+
+    if (!employeeResult.response?.ok) {
+      return { ok: false, message: getErrorMessage(employeeResult, "No se pudo iniciar sesión") };
+    }
+
+    // El endpoint de login de empleado no devuelve su id. Se consulta el recurso
+    // existente de empleados una vez para poder filtrar sus citas por idEmpleado.
+    const employeesResult = await requestApi("/empleados/obtener");
+    const employee = Array.isArray(employeesResult.payload)
+      ? employeesResult.payload.find((item) => String(item.email || "").toLowerCase() === normalizedEmail)
+      : null;
+
+    if (!employee?._id) {
+      await requestApi("/logoutEmpleado", { method: "POST" });
+      return { ok: false, message: "No fue posible identificar el perfil del empleado" };
+    }
+
+    const name = [employee.nombre || employee.name, employee.apellido || employee.lastName]
+      .filter(Boolean)
+      .join(" ");
+
+    persistSession({
+      email: normalizedEmail,
+      role: "employee",
+      employeeId: employee._id,
+      name: name || normalizedEmail,
+    });
+
+    return { ok: true, role: "employee", message: employeeResult.payload.message || "Sesión iniciada correctamente" };
+  }, [persistSession]);
+
+  const requestRecoveryCode = useCallback(async ({ email }) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    sessionStorage.removeItem(RECOVERY_ROLE_STORAGE_KEY);
+    const adminResult = await requestApi("/adminRecovery/requestCode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: normalizedEmail }),
+    });
+
+    if (adminResult.response?.ok) {
+      sessionStorage.setItem(RECOVERY_ROLE_STORAGE_KEY, "admin");
+      return { ok: true, message: adminResult.payload.message || "Código enviado al correo" };
+    }
+
+    const adminNotFound = adminResult.response?.status === 404
+      && adminResult.payload?.message === "Admin not found";
+    if (!adminNotFound) {
+      return { ok: false, message: getErrorMessage(adminResult, "No se pudo enviar el código") };
+    }
+
+    const employeeResult = await requestApi("/empleadoRecovery/requestCode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: normalizedEmail }),
+    });
+
+    if (!employeeResult.response?.ok) {
+      return { ok: false, message: getErrorMessage(employeeResult, "No se pudo enviar el código") };
+    }
+
+    sessionStorage.setItem(RECOVERY_ROLE_STORAGE_KEY, "employee");
+    return { ok: true, message: employeeResult.payload.message || "Código enviado al correo" };
+  }, []);
+
+  const recoveryRequest = useCallback(async (action, body, fallback) => {
+    const role = sessionStorage.getItem(RECOVERY_ROLE_STORAGE_KEY);
+    if (!role) return { ok: false, message: "Solicita un nuevo código de recuperación" };
+
+    const basePath = role === "employee" ? "/empleadoRecovery" : "/adminRecovery";
+    const result = await requestApi(`${basePath}/${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!result.response?.ok) return { ok: false, message: getErrorMessage(result, fallback) };
+    return { ok: true, message: result.payload.message || "Operación realizada correctamente" };
+  }, []);
+
+  const verifyRecoveryCode = useCallback(
+    ({ code }) => recoveryRequest("verifyCode", { code }, "Código inválido"),
+    [recoveryRequest],
   );
 
-  /**
-   * Paso 1 de recuperación: envía código OTP al correo del admin.
-   *
-   * @param {{email: string}} param Email del administrador.
-   * @returns {Promise<{ok: boolean, message: string}>}
-   */
-  const requestRecoveryCode = useCallback(async ({ email }) => {
-    const response = await fetch(`${API_URL}/adminRecovery/requestCode`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ email }),
-    });
-
-    const payload = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      return {
-        ok: false,
-        message: payload.message || "No se pudo enviar el código",
-      };
-    }
-
-    return {
-      ok: true,
-      message: payload.message || "Código enviado al correo",
-    };
-  }, []);
-
-  /**
-   * Paso 2 de recuperación: verifica el código OTP ingresado.
-   *
-   * @param {{code: string}} param Código ingresado por el usuario.
-   * @returns {Promise<{ok: boolean, message: string}>}
-   */
-  const verifyRecoveryCode = useCallback(async ({ code }) => {
-    const response = await fetch(`${API_URL}/adminRecovery/verifyCode`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ code }),
-    });
-
-    const payload = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      return {
-        ok: false,
-        message: payload.message || "Código inválido",
-      };
-    }
-
-    return {
-      ok: true,
-      message: payload.message || "Código verificado correctamente",
-    };
-  }, []);
-
-  /**
-   * Paso 3 de recuperación: establece la nueva contraseña.
-   *
-   * @param {{newPassword: string, confirmNewPassword: string}} param Nuevas contraseñas.
-   * @returns {Promise<{ok: boolean, message: string}>}
-   */
   const resetPassword = useCallback(async ({ newPassword, confirmNewPassword }) => {
-    const response = await fetch(`${API_URL}/adminRecovery/newPassword`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ newPassword, confirmNewPassword }),
-    });
+    const result = await recoveryRequest(
+      "newPassword",
+      { newPassword, confirmNewPassword },
+      "No se pudo cambiar la contraseña",
+    );
 
-    const payload = await response.json().catch(() => ({}));
+    if (result.ok) sessionStorage.removeItem(RECOVERY_ROLE_STORAGE_KEY);
+    return result;
+  }, [recoveryRequest]);
 
-    if (!response.ok) {
-      return {
-        ok: false,
-        message: payload.message || "No se pudo cambiar la contraseña",
-      };
-    }
-
-    return {
-      ok: true,
-      message: payload.message || "Contraseña actualizada correctamente",
-    };
-  }, []);
-
-  /**
-   * Cierra sesión en backend y frontend.
-   *
-   * @returns {Promise<void>}
-   *
-   * Tip de buenas prácticas:
-   * Se usa try/finally para asegurar que la sesión local se limpie incluso
-   * si la petición de logout falla (por red o servidor).
-   */
   const logout = useCallback(async () => {
+    const endpoint = user?.role === "employee" ? "/logoutEmpleado" : "/adminLogout";
     try {
-      await fetch(`${API_URL}/adminLogout`, {
-        method: "POST",
-        credentials: "include",
-      });
+      await requestApi(endpoint, { method: "POST" });
     } finally {
       persistSession(null);
     }
-  }, [persistSession]);
+  }, [persistSession, user?.role]);
 
   const updateUser = useCallback((changes) => {
     persistSession({ ...(user || {}), ...changes });
   }, [persistSession, user]);
 
-  /**
-   * Función utilitaria para hacer peticiones al backend adjuntando
-   * credenciales y parseando la respuesta JSON automáticamente.
-   */
   const fetchApi = useCallback(async (endpoint, options = {}) => {
     const isFormData = options.body instanceof FormData;
-    const headers = options.headers || {};
-    
-    if (!isFormData && !headers["Content-Type"]) {
-      headers["Content-Type"] = "application/json";
-    }
+    const headers = { ...(options.headers || {}) };
+    if (!isFormData && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
 
-    const config = {
+    const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       headers,
       credentials: "include",
-    };
-
-    const response = await fetch(`${API_URL}${endpoint}`, config);
-    
-    let payload = null;
+    });
+    const text = await response.text();
+    let payload;
     try {
-      const text = await response.text();
       payload = text ? JSON.parse(text) : null;
     } catch {
       payload = null;
     }
 
     if (!response.ok) {
-      throw new Error((payload && payload.message) || `Error ${response.status}: ${response.statusText}`);
+      throw new Error(payload?.message || `Error ${response.status}: ${response.statusText}`);
     }
-
     return payload;
   }, []);
 
-  // value reúne todo lo que otros componentes necesitan del contexto.
-  // isAuthenticated se deriva del estado para no repetir esa lógica en cada vista.
   const value = {
     user,
     loading,
     isAuthenticated: Boolean(user),
+    isEmployee: user?.role === "employee",
     login,
     logout,
     updateUser,
@@ -296,7 +243,6 @@ export function AuthProvider({ children }) {
     fetchApi,
   };
 
-  // El Provider "inyecta" este valor a toda la app hija.
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

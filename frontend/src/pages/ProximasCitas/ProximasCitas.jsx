@@ -77,6 +77,29 @@ const getWazeUrl = (coordinates) => {
   return `https://www.waze.com/ul?ll=${coordinates.latitude}%2C${coordinates.longitude}&navigate=yes`
 }
 
+const mapCitaFromApi = (cita) => ({
+  id: cita._id,
+  servicio: cita.idService?.nameService || (typeof cita.idService === 'string' ? cita.idService : "Servicio no asignado"),
+  cliente: cita.idCustomer?.nombre || (typeof cita.idCustomer === 'string' ? cita.idCustomer : "Cliente no asignado"),
+  idServiceRaw: cita.idService?._id || cita.idService,
+  idCustomerRaw: cita.idCustomer?._id || cita.idCustomer,
+  idEmpleadoRaw: cita.idEmpleado?._id || cita.idEmpleado,
+  empleado: [cita.idEmpleado?.nombre || cita.idEmpleado?.name, cita.idEmpleado?.apellido || cita.idEmpleado?.lastName].filter(Boolean).join(" ") || "Sin asignar",
+  fecha: formatCitaRange(cita.dateStart, cita.dateEnd),
+  precio: String(cita.finalPrice || "0"),
+  estado: cita.status === "Pendiente" ? "Programado" : (cita.status || "Programado"),
+  isCompleted: cita.isCompleted === true || cita.status === "Finalizado",
+  completionNotes: cita.completionNotes || "",
+  ubicacion: cita.clientLocation || "No especificada",
+  direccion: cita.clientDirection || "No especificada",
+  coordinates: cita.clientCoordinates || null,
+  mapUrl: cita.clientMapUrl || "",
+  telefono: cita.clientPhone || "No especificado",
+  descripcion: cita.description || "Sin descripción",
+  dateStart: cita.dateStart,
+  dateEnd: cita.dateEnd,
+})
+
 /**
  * Componente DatePicker personalizado
  */
@@ -284,6 +307,7 @@ export default function ProximasCitas() {
   const [selectedDate, setSelectedDate] = useState(new Date()) // Hoy por defecto
 
   const [citas, setCitas] = useState([])
+  const [calendarCitas, setCalendarCitas] = useState([])
   const [empleados, setEmpleados] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -300,7 +324,7 @@ export default function ProximasCitas() {
 
   async function loadEmpleados() {
     try {
-      const data = await fetchApi("/empleados")
+      const data = await fetchApi("/empleados/obtener")
       setEmpleados(data || [])
     } catch (error) {
       console.error("Error al cargar empleados:", error)
@@ -310,33 +334,15 @@ export default function ProximasCitas() {
   async function loadCitas() {
     try {
       setLoading(true)
-      const result = await fetchApi(`/proyects/paginado?page=${page}&limit=${limit}`)
+      const [result, calendarResult] = await Promise.all([
+        fetchApi(`/proyects/paginado?page=${page}&limit=${limit}`),
+        fetchApi("/proyects"),
+      ])
       const data = result?.data || []
       // Mapear los datos del backend a la estructura que espera la UI
-      const mappedCitas = (data || []).map(cita => ({
-        id: cita._id,
-        servicio: cita.idService?.nameService || (typeof cita.idService === 'string' ? cita.idService : "Servicio no asignado"),
-        cliente: cita.idCustomer?.nombre || (typeof cita.idCustomer === 'string' ? cita.idCustomer : "Cliente no asignado"),
-        idServiceRaw: cita.idService?._id || cita.idService,
-        idCustomerRaw: cita.idCustomer?._id || cita.idCustomer,
-        idEmpleadoRaw: cita.idEmpleado?._id || cita.idEmpleado,
-        empleado: [cita.idEmpleado?.nombre || cita.idEmpleado?.name, cita.idEmpleado?.apellido || cita.idEmpleado?.lastName].filter(Boolean).join(" ") || "Sin asignar",
-        fecha: formatCitaRange(cita.dateStart, cita.dateEnd),
-        precio: String(cita.finalPrice || "0"),
-        estado: cita.status === "Pendiente" ? "Programado" : (cita.status || "Programado"),
-        isCompleted: cita.isCompleted === true || cita.status === "Finalizado",
-        completionNotes: cita.completionNotes || "",
-        ubicacion: cita.clientLocation || "No especificada",
-        direccion: cita.clientDirection || "No especificada",
-        coordinates: cita.clientCoordinates || null,
-        mapUrl: cita.clientMapUrl || "",
-        telefono: cita.clientPhone || "No especificado",
-        descripcion: cita.description || "Sin descripción",
-        // Guardamos los originales para editar
-        dateStart: cita.dateStart,
-        dateEnd: cita.dateEnd,
-      }))
+      const mappedCitas = (data || []).map(mapCitaFromApi)
       setCitas(mappedCitas)
+      setCalendarCitas((Array.isArray(calendarResult) ? calendarResult : []).map(mapCitaFromApi))
       setTotal(result?.total || 0)
       setTotalPages(result?.totalPages || 1)
     } catch (error) {
@@ -587,7 +593,7 @@ export default function ProximasCitas() {
     if (!selectedDate) return []
     
     // Comparar solo día, mes y año
-    return citas.filter((cita) => {
+    return calendarCitas.filter((cita) => {
       const citaDate = parseCitaDate(cita.dateStart)
       return citaDate &&
         citaDate.getFullYear() === selectedDate.getFullYear() &&
@@ -979,7 +985,13 @@ export default function ProximasCitas() {
                     calendarMonth.getMonth() === today.getMonth() &&
                     calendarMonth.getFullYear() === today.getFullYear()
                   
-                  const hasCitas = day && [15, 19, 21].includes(day)
+                  const hasCitas = day && calendarCitas.some((cita) => {
+                    const citaDate = parseCitaDate(cita.dateStart)
+                    return citaDate
+                      && citaDate.getDate() === day
+                      && citaDate.getMonth() === calendarMonth.getMonth()
+                      && citaDate.getFullYear() === calendarMonth.getFullYear()
+                  })
                   
                   return (
                     <button

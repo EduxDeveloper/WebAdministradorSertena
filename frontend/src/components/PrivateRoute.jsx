@@ -21,14 +21,20 @@ import { ForbiddenPage } from "./RouteFeedback";
  * Mientras se verifica la sesión (loading = true), no renderizamos nada
  * para evitar un "flash" de redireccionamiento incorrecto.
  */
-function PrivateRoute() {
-  const { isAuthenticated, loading } = useAuth();
+function PrivateRoute({ allowedRoles }) {
+  const { isAuthenticated, loading, user } = useAuth();
 
   // Mientras se verifica si hay sesión activa, no hacemos nada
   if (loading) return null;
 
   // Si no está autenticado, redirigimos al login
-  return isAuthenticated ? <Outlet /> : <ForbiddenPage />;
+  if (!isAuthenticated) return <ForbiddenPage />;
+
+  if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    return <ForbiddenPage />;
+  }
+
+  return <Outlet />;
 }
 
 export default PrivateRoute;

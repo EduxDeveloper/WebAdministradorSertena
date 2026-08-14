@@ -16,10 +16,18 @@ import Empleados from './pages/Empleados/Empleados'
 import Resenias from './pages/Resenias/Resenias'
 import ProximasCitas from './pages/ProximasCitas/ProximasCitas'
 import Configuracion from './pages/Configuracion/Configuracion'
+import EmployeeDashboard from './pages/Empleado/EmployeeDashboard'
+import EmployeeAppointments from './pages/Empleado/EmployeeAppointments'
 import { AdminUnknownRoute } from './components/RouteFeedback'
+import useAuth from './hooks/useAuth'
 
 // Ruta protegida: solo deja pasar si el admin esta autenticado
 import PrivateRoute from './components/PrivateRoute'
+
+function DashboardByRole() {
+  const { isEmployee } = useAuth()
+  return isEmployee ? <EmployeeDashboard /> : <Dashboard />
+}
 
 // Componente principal de la aplicacion
 // Aqui se definen todas las rutas y a que pagina corresponde cada URL
@@ -33,15 +41,24 @@ function App() {
         <Route path="/verify-code" element={<VerifyCode />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Rutas privadas: solo accesibles si el admin inicio sesion */}
+        {/* Inicio compartido: muestra un panel segun el rol autenticado. */}
         <Route element={<PrivateRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<DashboardByRole />} />
+        </Route>
+
+        {/* Rutas exclusivas del administrador. */}
+        <Route element={<PrivateRoute allowedRoles={["admin"]} />}>
           <Route path="/servicios" element={<Servicios />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/empleados" element={<Empleados />} />
           <Route path="/resenias" element={<Resenias />} />
           <Route path="/proximas-citas" element={<ProximasCitas />} />
           <Route path="/configuracion" element={<Configuracion />} />
+        </Route>
+
+        {/* Los empleados solo pueden consultar y actualizar sus propias citas. */}
+        <Route element={<PrivateRoute allowedRoles={["employee"]} />}>
+          <Route path="/mis-citas" element={<EmployeeAppointments />} />
         </Route>
 
         {/* Si el usuario pone cualquier otra URL, lo mandamos al login */}

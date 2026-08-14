@@ -13,10 +13,10 @@ export default function Sidebar({ activeTab = "Inicio" }) {
   const [showDropdown, setShowDropdown] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, user, isEmployee } = useAuth()
 
   // Menu de navegacion de la barra lateral
-  const menuItems = [
+  const adminMenuItems = [
     { name: "Inicio", icon: "home", route: "/dashboard" },
     { name: "Servicios", icon: "tools", route: "/servicios" },
     { name: "Clientes", icon: "users", route: "/clientes" },
@@ -25,6 +25,13 @@ export default function Sidebar({ activeTab = "Inicio" }) {
     { name: "Proximas citas", icon: "calendar", route: "/proximas-citas" },
     { name: "Configuración", icon: "settings", route: "/configuracion" },
   ]
+
+  const employeeMenuItems = [
+    { name: "Inicio", icon: "home", route: "/dashboard" },
+    { name: "Mis citas", icon: "calendar", route: "/mis-citas" },
+  ]
+
+  const menuItems = isEmployee ? employeeMenuItems : adminMenuItems
 
   // Funcion para renderizar los iconos SVG de forma dinamica
   const renderIcon = (name, color = "currentColor", size = 20) => {
@@ -194,7 +201,7 @@ export default function Sidebar({ activeTab = "Inicio" }) {
         {/* Dropdown Menu */}
         {showDropdown && (
           <div className="absolute bottom-full left-0 w-full mb-2 bg-[#001a1a] border border-[#00E9E9]/30 rounded-xl overflow-hidden shadow-xl z-20">
-            <button
+            {!isEmployee && <button
               onClick={() => { setShowDropdown(false); navigate("/configuracion") }}
               className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-[#00E9E9]/10 hover:text-[#00E9E9] transition-colors flex items-center gap-2 border-b border-white/5"
             >
@@ -203,7 +210,7 @@ export default function Sidebar({ activeTab = "Inicio" }) {
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
               </svg>
               Configuración
-            </button>
+            </button>}
             <button
               onClick={() => {
                 setShowDropdown(false)
@@ -232,8 +239,8 @@ export default function Sidebar({ activeTab = "Inicio" }) {
         >
           <div className="flex items-center gap-3 text-left">
             <div>
-              <div className="font-semibold text-sm">Admin User</div>
-              <div className="text-[11px] text-white/40">Conectado</div>
+              <div className="font-semibold text-sm">{isEmployee ? (user?.name || "Empleado") : "Admin User"}</div>
+              <div className="text-[11px] text-white/40">{isEmployee ? "Empleado conectado" : "Conectado"}</div>
             </div>
           </div>
           <svg 
