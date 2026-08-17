@@ -1,8 +1,8 @@
 import { createContext, useCallback, useState } from "react";
+import API_URL from "../config/api";
 
 const AuthContext = createContext(null);
 
-const API_URL = "http://localhost:4000/api";
 const SESSION_STORAGE_KEY = "sertena:auth-session";
 const LEGACY_SESSION_STORAGE_KEY = "sertena:admin-auth-session";
 const RECOVERY_ROLE_STORAGE_KEY = "sertena:recovery-role";
