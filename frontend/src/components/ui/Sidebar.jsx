@@ -5,9 +5,8 @@ import useAuth from "../../hooks/useAuth"
 import Swal from "sweetalert2"
 
 /**
- * Componente reutilizable de la barra lateral de navegacion.
- * Se usa en todas las paginas del panel de administracion (Dashboard, Servicios, Clientes, etc.)
- * Recibe el nombre de la pestaña activa para resaltar el elemento correspondiente del menu.
+ * Barra lateral del panel administrativo.
+ * Diseño corporativo: fondo oscuro sólido, acentos en color de marca.
  */
 export default function Sidebar({ activeTab = "Inicio" }) {
   const [showDropdown, setShowDropdown] = useState(false)
@@ -15,7 +14,6 @@ export default function Sidebar({ activeTab = "Inicio" }) {
   const navigate = useNavigate()
   const { logout, user, isEmployee } = useAuth()
 
-  // Menu de navegacion de la barra lateral
   const adminMenuItems = [
     { name: "Inicio", icon: "home", route: "/dashboard" },
     { name: "Servicios", icon: "tools", route: "/servicios" },
@@ -33,8 +31,7 @@ export default function Sidebar({ activeTab = "Inicio" }) {
 
   const menuItems = isEmployee ? employeeMenuItems : adminMenuItems
 
-  // Funcion para renderizar los iconos SVG de forma dinamica
-  const renderIcon = (name, color = "currentColor", size = 20) => {
+  const renderIcon = (name, color = "currentColor", size = 18) => {
     switch (name) {
       case "home":
         return (
@@ -95,7 +92,6 @@ export default function Sidebar({ activeTab = "Inicio" }) {
     }
   }
 
-  // Maneja la navegacion al hacer click en un elemento del menu
   const handleMenuClick = (item) => {
     if (item.route) {
       setIsMobileMenuOpen(false)
@@ -103,17 +99,16 @@ export default function Sidebar({ activeTab = "Inicio" }) {
     }
   }
 
-  // Cerrar sesion de forma real en el backend y luego redirigir al login
   const handleLogout = () => {
     Swal.fire({
       title: "¿Seguro que quieres cerrar sesión?",
       text: "Tendrás que volver a iniciar sesión para acceder al panel",
       icon: "warning",
       showCancelButton: true,
-      background: "#001a1a",
-      color: "#fff",
-      confirmButtonColor: "#ef4444",
-      cancelButtonColor: "#374151",
+      background: "#ffffff",
+      color: "#0f172a",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#64748b",
       confirmButtonText: "Sí, cerrar sesión",
       cancelButtonText: "Cancelar"
     }).then(async (result) => {
@@ -129,11 +124,11 @@ export default function Sidebar({ activeTab = "Inicio" }) {
       <button
         type="button"
         onClick={() => setIsMobileMenuOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-40 w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-lg"
-        style={{ background: "rgba(0, 26, 26, 0.95)", border: "1px solid rgba(255,255,255,0.15)" }}
+        className="lg:hidden fixed top-4 left-4 z-40 w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-md"
+        style={{ background: "#15354d", border: "1px solid rgba(255,255,255,0.12)" }}
         aria-label="Abrir menú de navegación"
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <line x1="4" y1="6" x2="20" y2="6" />
           <line x1="4" y1="12" x2="20" y2="12" />
           <line x1="4" y1="18" x2="20" y2="18" />
@@ -143,115 +138,98 @@ export default function Sidebar({ activeTab = "Inicio" }) {
       {isMobileMenuOpen && (
         <button
           type="button"
-          className="lg:hidden fixed inset-0 z-40 bg-black/60"
+          className="lg:hidden fixed inset-0 z-40 bg-slate-900/50"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-label="Cerrar menú de navegación"
         />
       )}
 
-    <aside
-      className={`${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} fixed inset-y-0 left-0 z-50 w-[280px] overflow-y-auto flex flex-col justify-between p-5 border-r border-white/10 transition-transform duration-300 lg:sticky lg:top-0 lg:z-auto lg:w-[260px] lg:h-screen lg:shrink-0 lg:translate-x-0`}
-      style={{
-        background: "rgba(0, 20, 20, 0.45)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setIsMobileMenuOpen(false)}
-        className="lg:hidden absolute top-4 right-4 w-9 h-9 rounded-lg text-white/80 hover:bg-white/10"
-        aria-label="Cerrar menú"
+      <aside
+        className={`${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} fixed inset-y-0 left-0 z-50 w-[260px] overflow-y-auto flex flex-col justify-between p-5 border-r border-white/10 transition-transform duration-300 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0`}
+        style={{ background: "#15354d" }}
       >
-        ✕
-      </button>
-      <div>
-        {/* Logotipo */}
-        <div className="mb-10 px-2">
-          <img src={logoSertena} alt="Sertena" className="w-full max-w-[200px] h-auto object-contain" />
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="lg:hidden absolute top-4 right-4 w-8 h-8 rounded-md text-white/70 hover:bg-white/10"
+          aria-label="Cerrar menú"
+        >
+          ✕
+        </button>
+
+        <div>
+          <div className="mb-8 px-1 pt-1">
+            <img src={logoSertena} alt="Sertena" className="w-full max-w-[180px] h-auto object-contain" />
+          </div>
+
+          <nav className="flex flex-col gap-1">
+            {menuItems.map((item) => {
+              const isSelected = activeTab === item.name
+              return (
+                <button
+                  key={item.name}
+                  onClick={() => handleMenuClick(item)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium transition-colors duration-150 ${
+                    isSelected
+                      ? "bg-white/10 text-white"
+                      : "text-white/60 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {renderIcon(item.icon, isSelected ? "#00E9E9" : "rgba(255,255,255,0.55)", 18)}
+                  <span>{item.name}</span>
+                </button>
+              )
+            })}
+          </nav>
         </div>
 
-        {/* Menu de navegacion */}
-        <nav className="flex flex-col gap-2">
-          {menuItems.map((item) => {
-            const isSelected = activeTab === item.name
-            return (
+        <div className="relative mt-6">
+          {showDropdown && (
+            <div className="absolute bottom-full left-0 w-full mb-2 bg-white border border-slate-200 rounded-lg overflow-hidden shadow-lg z-20">
+              {!isEmployee && (
+                <button
+                  onClick={() => { setShowDropdown(false); navigate("/configuracion") }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2 border-b border-slate-100"
+                >
+                  {renderIcon("settings", "#64748b", 16)}
+                  Configuración
+                </button>
+              )}
               <button
-                key={item.name}
-                onClick={() => handleMenuClick(item)}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-[14px] text-[14px] font-medium transition-all duration-300 ${isSelected
-                  ? "bg-gradient-to-r from-emerald-500 to-green-400 text-black shadow-lg shadow-emerald-500/25 font-bold scale-[1.02]"
-                  : "text-white/60 hover:text-white hover:bg-white/5"
-                  }`}
-                style={!isSelected ? {
-                  background: "rgba(255, 255, 255, 0.03)",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
-                } : {}}
+                onClick={() => {
+                  setShowDropdown(false)
+                  handleLogout()
+                }}
+                className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
               >
-                {renderIcon(item.icon, isSelected ? "#000" : "rgba(255,255,255,0.7)", 20)}
-                <span>{item.name}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Cerrar Sesión
               </button>
-            )
-          })}
-        </nav>
-      </div>
-
-      {/* Menú de perfil de usuario con Dropdown */}
-      <div className="relative mt-8">
-        {/* Dropdown Menu */}
-        {showDropdown && (
-          <div className="absolute bottom-full left-0 w-full mb-2 bg-[#001a1a] border border-[#00E9E9]/30 rounded-xl overflow-hidden shadow-xl z-20">
-            {!isEmployee && <button
-              onClick={() => { setShowDropdown(false); navigate("/configuracion") }}
-              className="w-full text-left px-4 py-3 text-sm text-white/80 hover:bg-[#00E9E9]/10 hover:text-[#00E9E9] transition-colors flex items-center gap-2 border-b border-white/5"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-              </svg>
-              Configuración
-            </button>}
-            <button
-              onClick={() => {
-                setShowDropdown(false)
-                handleLogout()
-              }}
-              className="w-full text-left px-4 py-3 text-sm text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors flex items-center gap-2"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-              Cerrar Sesión
-            </button>
-          </div>
-        )}
-
-        <button
-          onClick={() => setShowDropdown(!showDropdown)}
-          className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/10 transition-all duration-300"
-          style={{
-            background: "rgba(255, 255, 255, 0.05)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-          }}
-          title="Menú de Usuario"
-        >
-          <div className="flex items-center gap-3 text-left">
-            <div>
-              <div className="font-semibold text-sm">{isEmployee ? (user?.name || "Empleado") : "Admin User"}</div>
-              <div className="text-[11px] text-white/40">{isEmployee ? "Empleado conectado" : "Conectado"}</div>
             </div>
-          </div>
-          <svg 
-            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2"
-            style={{ transform: showDropdown ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}
+          )}
+
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors border border-white/10 bg-white/5"
+            title="Menú de Usuario"
           >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
-      </div>
-    </aside>
+            <div className="text-left">
+              <div className="font-semibold text-sm text-white">{isEmployee ? (user?.name || "Empleado") : "Admin User"}</div>
+              <div className="text-[11px] text-white/45">{isEmployee ? "Empleado conectado" : "Conectado"}</div>
+            </div>
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="2"
+              style={{ transform: showDropdown ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+      </aside>
     </>
   )
 }

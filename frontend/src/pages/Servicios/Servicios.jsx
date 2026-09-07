@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import Sidebar from "../../components/ui/Sidebar"
+import AdminLayout, { AdminPageHeader, AdminPrimaryButton, AdminSecondaryButton } from "../../components/ui/AdminLayout"
 import useAuth from "../../hooks/useAuth"
 import Swal from "sweetalert2"
 import ViewModeToggle from "../../components/ui/ViewModeToggle"
@@ -125,9 +125,9 @@ export default function Servicios() {
         title: "Campos Incompletos",
         text: "Por favor llena todos los campos (Nombre, Tarifa, Descripción).",
         icon: "warning",
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: "#00E9E9"
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: "#0d9488"
       })
       return
     }
@@ -137,9 +137,9 @@ export default function Servicios() {
         title: "Imagen Requerida",
         text: "Por favor selecciona una imagen para el servicio.",
         icon: "warning",
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: "#00E9E9"
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: "#0d9488"
       })
       return
     }
@@ -171,9 +171,9 @@ export default function Servicios() {
         title: "¡Éxito!",
         text: editingId ? "Servicio actualizado correctamente" : "Servicio creado correctamente",
         icon: "success",
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: "#00E9E9"
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: "#0d9488"
       })
 
       handleCloseModal()
@@ -184,9 +184,9 @@ export default function Servicios() {
         title: "Error",
         text: "Error al guardar: " + error.message,
         icon: "error",
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: "#00E9E9"
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: "#0d9488"
       })
     }
   }
@@ -196,11 +196,11 @@ export default function Servicios() {
       title: '¿Estás seguro?',
       text: "No podrás revertir esto",
       icon: 'warning',
-      background: "#001a1a",
-      color: "#fff",
+      background: "#ffffff",
+      color: "#0f172a",
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#00E9E9',
+      cancelButtonColor: '#64748b',
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     })
@@ -213,9 +213,9 @@ export default function Servicios() {
         title: '¡Eliminado!',
         text: 'El servicio ha sido eliminado.',
         icon: 'success',
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: '#00E9E9'
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: '#0d9488'
       })
       loadServicios()
     } catch (error) {
@@ -224,142 +224,67 @@ export default function Servicios() {
         title: "Error",
         text: "Error al eliminar: " + error.message,
         icon: "error",
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: "#00E9E9"
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: "#0d9488"
       })
     }
   }
 
   return (
-    <div className="relative w-full min-h-screen flex text-white bg-[#15354d]">
-
-      {/* BARRA LATERAL - Componente reutilizable */}
-      <Sidebar activeTab="Servicios" />
-
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-1 min-w-0 min-h-screen p-8 relative flex flex-col gap-6" style={{ zIndex: 10 }}>
-        {/* Encabezado */}
-        <div className="flex items-start justify-between w-full">
-          <div>
-            <div className="text-emerald-400 font-medium text-[15px] mb-1">
-              Bienvenido! Administrador
-            </div>
-            <h1 className="text-3xl md:text-[38px] font-bold tracking-tight text-white mb-2 leading-none">
-              Catalogo de Servicios
-            </h1>
-            <p className="text-white/40 text-sm">
-              Gestione la variedad de servicios que ofrece con su respectivo precio base
-            </p>
-          </div>
-
-          {/* Boton Añadir */}
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2.5 px-6 py-3 rounded-2xl text-sm font-bold transition-all duration-300 hover:scale-[1.02] cursor-pointer"
-            style={{
-              background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-              boxShadow: "0 4px 20px rgba(16, 185, 129, 0.3)",
-              color: "#fff",
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Añadir
-          </button>
-        </div>
+    <AdminLayout activeTab="Servicios">
+        <AdminPageHeader
+          eyebrow="Bienvenido, Administrador"
+          title="Catalogo de Servicios"
+          description="Gestione la variedad de servicios que ofrece con su respectivo precio base"
+          action={
+            <AdminPrimaryButton onClick={() => setShowModal(true)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Añadir
+            </AdminPrimaryButton>
+          }
+        />
 
         <div className="flex justify-end">
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
         </div>
 
-        {/* Grid de tarjetas de servicios */}
         <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full ${viewMode === "cards" ? "" : "hidden"}`}>
           {loading ? (
             <ServiceCardsLoadingGrid />
           ) : servicios.length === 0 ? (
-            <div className="col-span-full text-center text-white/50">No hay servicios registrados</div>
+            <div className="col-span-full admin-empty">No hay servicios registrados</div>
           ) : (
             servicios.map((servicio) => (
-              <div
-                key={servicio._id}
-                className="rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl group flex flex-col"
-                style={{
-                  background: "rgba(255, 255, 255, 0.04)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                }}
-              >
-                {/* Imagen del servicio */}
+              <div key={servicio._id} className="admin-service-card flex flex-col">
                 <div className="w-full h-[200px] overflow-hidden relative shrink-0">
-                  <img
-                    src={servicio.imgUrl}
-                    alt={servicio.nameService}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.6) 100%)",
-                    }}
-                  />
+                  <img src={servicio.imgUrl} alt={servicio.nameService} className="w-full h-full object-cover" />
                 </div>
-
-                {/* Info del servicio */}
-                <div className="p-5 flex-1 flex flex-col relative">
+                <div className="p-5 flex-1 flex flex-col">
                   <div className="flex justify-between items-start mb-1.5">
-                    <h3 className="text-base font-bold text-white">{servicio.nameService}</h3>
-                    <span 
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{
-                        background: (servicio.status !== false) ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)",
-                        color: (servicio.status !== false) ? "#34d399" : "#f87171",
-                        border: `1px solid ${(servicio.status !== false) ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
-                      }}
-                    >
+                    <h3 className="text-base font-bold text-slate-900">{servicio.nameService}</h3>
+                    <span className={`admin-badge ${servicio.status !== false ? "admin-badge--green" : "admin-badge--red"}`}>
                       {(servicio.status !== false) ? "Activo" : "Inactivo"}
                     </span>
                   </div>
-                  <p className="text-[13px] text-white/40 leading-relaxed mb-4 flex-1">
-                    {servicio.description}
-                  </p>
-
-                  {/* Separador */}
-                  <div className="border-t border-white/10 mb-4" />
-
-                  {/* Tarifa y boton editar/eliminar */}
+                  <p className="text-sm admin-text-muted leading-relaxed mb-4 flex-1">{servicio.description}</p>
+                  <div className="border-t border-slate-200 mb-4" />
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-[12px] text-white/40 font-medium">Tarifa Base</div>
-                      <div className="text-emerald-400 font-bold text-base">${servicio.price}</div>
+                      <div className="text-xs admin-text-muted font-medium">Tarifa Base</div>
+                      <div className="text-teal-600 font-bold text-base">${servicio.price}</div>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEditServicio(servicio)}
-                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
-                        style={{
-                          background: "rgba(59, 130, 246, 0.15)",
-                          border: "1px solid rgba(59, 130, 246, 0.3)",
-                        }}
-                        title="Editar"
-                      >
+                      <button type="button" onClick={() => handleEditServicio(servicio)} className="admin-btn admin-btn-icon admin-btn-secondary" title="Editar">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                         </svg>
                       </button>
-                      <button
-                        onClick={() => handleDeleteServicio(servicio._id)}
-                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
-                        style={{
-                          background: "rgba(239, 68, 68, 0.15)",
-                          border: "1px solid rgba(239, 68, 68, 0.3)",
-                        }}
-                        title="Eliminar"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <button type="button" onClick={() => handleDeleteServicio(servicio._id)} className="admin-btn admin-btn-icon admin-btn-danger" title="Eliminar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="3 6 5 6 21 6"></polyline>
                           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                           <line x1="10" y1="11" x2="10" y2="17"></line>
@@ -375,26 +300,31 @@ export default function Servicios() {
         </div>
 
         {viewMode === "list" && (
-          <div className="rounded-2xl overflow-hidden w-full border border-white/10" style={{ background: "rgba(255,255,255,0.03)" }}>
+          <div className="admin-card admin-table-wrap">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="admin-table">
                 <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="px-6 py-4 text-xs text-white/70">Servicio</th>
-                    <th className="px-6 py-4 text-xs text-white/70">Descripción</th>
-                    <th className="px-6 py-4 text-xs text-white/70">Precio</th>
-                    <th className="px-6 py-4 text-xs text-white/70">Estado</th>
-                    <th className="px-6 py-4 text-xs text-white/70 text-right">Acciones</th>
+                  <tr>
+                    <th>Servicio</th>
+                    <th>Descripción</th>
+                    <th>Precio</th>
+                    <th>Estado</th>
+                    <th className="text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {loading ? <TableLoadingRows columns={5} /> : servicios.length === 0 ? <tr><td colSpan="5" className="p-6 text-center text-white/50">No hay servicios registrados</td></tr> : servicios.map((servicio) => (
-                    <tr key={servicio._id} className="hover:bg-white/[0.03]">
-                      <td className="px-6 py-4"><div className="flex items-center gap-3"><img src={servicio.imgUrl} alt="" className="w-10 h-10 rounded-lg object-cover" /><span className="font-semibold text-white">{servicio.nameService}</span></div></td>
-                      <td className="px-6 py-4 text-sm text-white/60 max-w-xs truncate">{servicio.description}</td>
-                      <td className="px-6 py-4 text-emerald-300 font-semibold">${servicio.price}</td>
-                      <td className="px-6 py-4"><span className={`text-xs font-semibold ${servicio.status !== false ? "text-emerald-300" : "text-red-300"}`}>{servicio.status !== false ? "Activo" : "Inactivo"}</span></td>
-                      <td className="px-6 py-4 text-right space-x-2"><button onClick={() => handleEditServicio(servicio)} className="text-sm text-blue-300 hover:text-blue-200">Editar</button><button onClick={() => handleDeleteServicio(servicio._id)} className="text-sm text-red-300 hover:text-red-200">Eliminar</button></td>
+                <tbody>
+                  {loading ? <TableLoadingRows columns={5} /> : servicios.length === 0 ? (
+                    <tr><td colSpan="5" className="admin-empty">No hay servicios registrados</td></tr>
+                  ) : servicios.map((servicio) => (
+                    <tr key={servicio._id}>
+                      <td><div className="flex items-center gap-3"><img src={servicio.imgUrl} alt="" className="w-10 h-10 rounded-lg object-cover" /><span className="font-semibold text-slate-900">{servicio.nameService}</span></div></td>
+                      <td className="admin-text-muted max-w-xs truncate">{servicio.description}</td>
+                      <td className="text-teal-600 font-semibold">${servicio.price}</td>
+                      <td><span className={`admin-badge ${servicio.status !== false ? "admin-badge--green" : "admin-badge--red"}`}>{servicio.status !== false ? "Activo" : "Inactivo"}</span></td>
+                      <td className="text-right space-x-2">
+                        <button type="button" onClick={() => handleEditServicio(servicio)} className="text-sm text-blue-600 hover:text-blue-700 font-medium">Editar</button>
+                        <button type="button" onClick={() => handleDeleteServicio(servicio._id)} className="text-sm text-red-600 hover:text-red-700 font-medium">Eliminar</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -402,196 +332,78 @@ export default function Servicios() {
             </div>
           </div>
         )}
-      </main>
 
-      {/* MODAL: Agregar Nuevo Servicio */}
       {showModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4"
-          style={{ zIndex: 100 }}
-        >
-          {/* Overlay oscuro */}
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={handleCloseModal}
-          />
-
-          {/* Contenido del modal */}
-          <div
-            className="relative w-full max-w-[620px] rounded-2xl p-8 animate-fade-in-up"
-            style={{
-              background: "linear-gradient(135deg, rgba(200, 200, 210, 0.85) 0%, rgba(180, 180, 195, 0.80) 100%)",
-              backdropFilter: "blur(40px)",
-              WebkitBackdropFilter: "blur(40px)",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
-              boxShadow: "0 25px 60px rgba(0,0,0,0.5)",
-            }}
-          >
-            {/* Header del modal */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                {editingId ? "Editar Servicio" : "Agregar Nuevo Servicio"}
-              </h2>
-              <button
-                onClick={handleCloseModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/10 transition-all duration-200 cursor-pointer"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div className="admin-modal-overlay" onClick={handleCloseModal}>
+          <div className="admin-modal" style={{ maxWidth: "620px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">{editingId ? "Editar Servicio" : "Agregar Nuevo Servicio"}</h2>
+              <button type="button" onClick={handleCloseModal} className="admin-btn admin-btn-icon admin-btn-secondary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-
-            {/* Linea separadora */}
-            <div className="border-t border-black/10 mb-6" />
-
-            {/* Fila: Nombre y Tarifa Base */}
-            <div className="grid grid-cols-2 gap-4 mb-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">Nombre</label>
-                <input
-                  type="text"
-                  value={formData.nameService}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nameService: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
-                  style={{
-                    background: "rgba(255,255,255,0.5)",
-                    border: "1px solid rgba(0,0,0,0.1)",
-                  }}
-                />
+            <div className="admin-modal-body">
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <label className="admin-label">Nombre
+                  <input type="text" value={formData.nameService} onChange={(e) => setFormData(prev => ({ ...prev, nameService: e.target.value }))} className="admin-input" />
+                </label>
+                <label className="admin-label">Tarifa Base
+                  <input type="number" value={formData.price} onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))} className="admin-input" />
+                </label>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">Tarifa Base</label>
-                <input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
-                  style={{
-                    background: "rgba(255,255,255,0.5)",
-                    border: "1px solid rgba(0,0,0,0.1)",
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Descripcion */}
-            <div className="mb-5">
-              <label className="block text-sm font-semibold text-gray-800 mb-2">Descripción</label>
-              <textarea
-                rows={4}
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full px-4 py-3 rounded-lg text-sm text-gray-900 outline-none resize-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
-                style={{
-                  background: "rgba(255,255,255,0.5)",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                }}
-              />
-            </div>
-
-            {/* Cargar imagen y Estado */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              {/* Drop zone para imagen */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">Cargar Imagen del Servicio</label>
-                <div
-                  className="rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all duration-200 relative overflow-hidden"
-                  style={{
-                    background: dragActive ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.4)",
-                    border: dragActive ? "2px dashed #10b981" : "2px dashed rgba(0,0,0,0.15)",
-                    minHeight: "150px",
-                  }}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {formData.imagenPreview ? (
-                    <img src={formData.imagenPreview} alt="Preview" className="w-full h-full object-cover absolute inset-0" />
-                  ) : (
-                    <>
-                      {/* Icono de upload */}
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
-                      <p className="text-[12px] text-gray-500 text-center px-4">
-                        Arrastra y suelta una imagen aquí, o explora
-                      </p>
-                      <p className="text-[10px] text-gray-400 mt-1">PNG, JPG hasta 10MB</p>
-                    </>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    className="hidden"
-                    onChange={handleFileInput}
-                  />
-                </div>
-              </div>
-
-              {/* Estado del servicio */}
-              <div className="flex flex-col items-start justify-center pl-4">
-                <h3 className="text-base font-bold text-gray-900 mb-1">Estado Del Servicio</h3>
-                <p className="text-[12px] text-gray-500 mb-4">¿Esta activo este servicio?</p>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setFormData(prev => ({ ...prev, activo: !prev.activo }))}
-                    className="relative w-14 h-7 rounded-full transition-all duration-300 cursor-pointer"
-                    style={{
-                      background: formData.activo
-                        ? "linear-gradient(135deg, #10b981, #34d399)"
-                        : "rgba(0,0,0,0.2)",
-                    }}
+              <label className="admin-label mb-5 block">Descripción
+                <textarea rows={4} value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} className="admin-input resize-none" />
+              </label>
+              <div className="grid grid-cols-2 gap-4 mb-2">
+                <div>
+                  <label className="admin-label mb-2 block">Cargar Imagen del Servicio</label>
+                  <div
+                    className="rounded-lg flex flex-col items-center justify-center cursor-pointer relative overflow-hidden border-2 border-dashed border-slate-300 bg-slate-50"
+                    style={{ minHeight: "150px", borderColor: dragActive ? "#0d9488" : undefined, background: dragActive ? "#ecfdf5" : undefined }}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    <div
-                      className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300"
-                      style={{
-                        left: formData.activo ? "calc(100% - 26px)" : "2px",
-                      }}
-                    />
-                  </button>
-                  <span className={`text-sm font-medium ${formData.activo ? "text-emerald-600" : "text-gray-500"}`}>
-                    {formData.activo ? "Estado Activo" : "Inactivo"}
-                  </span>
+                    {formData.imagenPreview ? (
+                      <img src={formData.imagenPreview} alt="Preview" className="w-full h-full object-cover absolute inset-0" />
+                    ) : (
+                      <>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        <p className="text-xs admin-text-muted text-center px-4">Arrastra y suelta una imagen aquí, o explora</p>
+                        <p className="text-[10px] admin-text-subtle mt-1">PNG, JPG hasta 10MB</p>
+                      </>
+                    )}
+                    <input ref={fileInputRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleFileInput} />
+                  </div>
+                </div>
+                <div className="flex flex-col items-start justify-center pl-2">
+                  <h3 className="text-base font-bold text-slate-900 mb-1">Estado Del Servicio</h3>
+                  <p className="text-xs admin-text-muted mb-4">¿Esta activo este servicio?</p>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, activo: !prev.activo }))} className="relative w-14 h-7 rounded-full transition-colors cursor-pointer" style={{ background: formData.activo ? "#0d9488" : "#cbd5e1" }}>
+                      <div className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300" style={{ left: formData.activo ? "calc(100% - 26px)" : "2px" }} />
+                    </button>
+                    <span className={`text-sm font-medium ${formData.activo ? "text-emerald-600" : "admin-text-muted"}`}>{formData.activo ? "Estado Activo" : "Inactivo"}</span>
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Separador */}
-            <div className="border-t border-black/10 mb-6" />
-
-            {/* Botones de accion */}
-            <div className="flex items-center justify-end gap-3">
-              <button
-                onClick={handleCloseModal}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-black/10 cursor-pointer"
-                style={{
-                  background: "rgba(255,255,255,0.5)",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveServicio}
-                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer"
-                style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-                  boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)",
-                }}
-              >
-                {editingId ? "Actualizar Servicio" : "Guardar Servicio"}
-              </button>
+            <div className="admin-modal-footer">
+              <AdminSecondaryButton onClick={handleCloseModal}>Cancelar</AdminSecondaryButton>
+              <AdminPrimaryButton onClick={handleSaveServicio}>{editingId ? "Actualizar Servicio" : "Guardar Servicio"}</AdminPrimaryButton>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   )
 }

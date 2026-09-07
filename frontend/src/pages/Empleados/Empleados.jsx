@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import Sidebar from "../../components/ui/Sidebar"
+import AdminLayout, { AdminPageHeader, AdminPrimaryButton, AdminSecondaryButton, AdminStatCard, AdminStatGrid } from "../../components/ui/AdminLayout"
 import useAuth from "../../hooks/useAuth"
 import Swal from 'sweetalert2'
 import ViewModeToggle from "../../components/ui/ViewModeToggle"
@@ -171,11 +171,11 @@ export default function Empleados() {
       title: '¿Estás seguro?',
       text: "No podrás revertir esto",
       icon: 'warning',
-      background: "#001a1a",
-      color: "#fff",
+      background: "#ffffff",
+      color: "#0f172a",
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#00E9E9',
+      cancelButtonColor: '#64748b',
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     })
@@ -188,9 +188,9 @@ export default function Empleados() {
         title: '¡Eliminado!',
         text: 'El empleado ha sido eliminado.',
         icon: 'success',
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: '#00E9E9'
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: '#0d9488'
       })
       loadEmpleados()
     } catch (error) {
@@ -199,9 +199,9 @@ export default function Empleados() {
         title: "Error",
         text: "Hubo un error al eliminar",
         icon: "error",
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: "#00E9E9"
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: "#0d9488"
       })
     }
   }
@@ -240,138 +240,72 @@ export default function Empleados() {
   const totalEmpleados = empleados.length
 
   return (
-    <div className="relative w-full min-h-screen flex text-white bg-[#15354d]">
+    <AdminLayout activeTab="Empleados">
+        <AdminPageHeader
+          eyebrow="Bienvenido, Administrador"
+          title="Gestión de Empleados"
+          description="Apartado administrativo de empleados"
+          action={
+            <AdminPrimaryButton onClick={() => setShowModal(true)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Añadir
+            </AdminPrimaryButton>
+          }
+        />
 
-      {/* BARRA LATERAL - Componente reutilizable */}
-      <Sidebar activeTab="Empleados" />
-
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-1 min-w-0 min-h-screen p-8 relative flex flex-col gap-6" style={{ zIndex: 10 }}>
-        {/* Encabezado */}
-        <div className="flex items-start justify-between w-full">
-          <div>
-            <div className="text-emerald-400 font-medium text-[15px] mb-1">
-              Bienvenido! Administrador
-            </div>
-            <h1 className="text-3xl md:text-[38px] font-bold tracking-tight text-white mb-2 leading-none">
-              Gestión de Empleados
-            </h1>
-            <p className="text-white/40 text-sm">
-              Apartado administrativo de empleados
-            </p>
-          </div>
-
-          {/* Boton Añadir */}
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2.5 px-6 py-3 rounded-2xl text-sm font-bold transition-all duration-300 hover:scale-[1.02] cursor-pointer"
-            style={{
-              background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-              boxShadow: "0 4px 20px rgba(16, 185, 129, 0.3)",
-              color: "#fff",
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Añadir
-          </button>
-        </div>
-
-        {/* Tarjetas de estadísticas */}
-        <div className="grid grid-cols-2 gap-4 w-full">
-          {/* Tarjeta: Total de empleados */}
-          <div
-            className="rounded-2xl p-6 flex items-center gap-4"
-            style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{
-                background: "rgba(59, 130, 246, 0.2)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <AdminStatGrid columns={2}>
+          <AdminStatCard
+            label="Total de empleados"
+            value={totalEmpleados}
+            iconTone="blue"
+            icon={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
-            </div>
-            <div>
-              <p className="text-white/50 text-xs font-medium">Total de empleados</p>
-              <p className="text-2xl font-bold text-white">{totalEmpleados}</p>
-            </div>
-          </div>
-
-          {/* Tarjeta: Empleados Activos */}
-          <div
-            className="rounded-2xl p-6 flex items-center gap-4"
-            style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{
-                background: "rgba(16, 185, 129, 0.2)",
-                border: "1px solid rgba(16, 185, 129, 0.3)",
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            }
+          />
+          <AdminStatCard
+            label="Activos"
+            value={empleadosActivos}
+            iconTone="green"
+            icon={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-            </div>
-            <div>
-              <p className="text-white/50 text-xs font-medium">Activos</p>
-              <p className="text-2xl font-bold text-white">{empleadosActivos}</p>
-            </div>
-          </div>
-        </div>
+            }
+          />
+        </AdminStatGrid>
 
         <div className="flex justify-end">
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
         </div>
 
-        {/* Tabla de empleados */}
-        <div
-          className={`rounded-2xl overflow-hidden w-full ${viewMode === "list" ? "" : "hidden"}`}
-          style={{
-            background: "rgba(255, 255, 255, 0.03)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-          }}
-        >
+        <div className={`admin-card admin-table-wrap ${viewMode === "list" ? "" : "hidden"}`}>
           <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse">
+            <table className="admin-table">
               <thead>
-                <tr className="border-b border-white/10">
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Nombre</th>
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Apellido</th>
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Correo</th>
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Salario</th>
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Estado</th>
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Verificación</th>
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide text-right">Acciones</th>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>Correo</th>
+                  <th>Salario</th>
+                  <th>Estado</th>
+                  <th>Verificación</th>
+                  <th className="text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody>
                 {loading ? (
                   <TableLoadingRows columns={7} />
                 ) : empleados.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-5 text-center text-white/50">No hay empleados registrados</td>
+                    <td colSpan="7" className="admin-empty">No hay empleados registrados</td>
                   </tr>
                 ) : (
                   empleados.map((empleado) => {
@@ -379,14 +313,9 @@ export default function Empleados() {
 
                     return (
                     <React.Fragment key={empleado._id}>
-                        <tr
-                            className="hover:bg-white/[0.03] transition-colors duration-200"
-                        >
-                          <td className="px-6 py-5 text-sm font-medium text-white/90 flex items-center gap-2">
-                          <button
-                            onClick={() => toggleRow(empleado._id)}
-                            className="p-1 rounded-md hover:bg-white/10 transition-colors"
-                          >
+                        <tr>
+                          <td className="font-medium text-slate-900">
+                          <button type="button" onClick={() => toggleRow(empleado._id)} className="admin-btn admin-btn-icon admin-btn-secondary mr-2">
                             <svg 
                               width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                               className={`transition-transform duration-200 ${expandedRows[empleado._id] ? 'rotate-180' : ''}`}
@@ -396,22 +325,12 @@ export default function Empleados() {
                           </button>
                           {empleado.nombre}
                         </td>
-                          <td className="px-6 py-5 text-sm text-white/60">{empleado.apellido}</td>
-                        <td className="px-6 py-5 text-sm text-white/60">{empleado.email}</td>
-                        <td className="px-6 py-5 text-sm text-white/60">${empleado.salario}</td>
-                        <td className="px-6 py-5 text-sm">
-                          <span
-                            className="px-3 py-1.5 rounded-full text-xs font-medium flex w-fit capitalize"
-                            style={{
-                              background: estaActivo
-                                ? "rgba(16, 185, 129, 0.2)"
-                                : "rgba(107, 114, 128, 0.2)",
-                              color: estaActivo
-                                ? "#10b981"
-                                : "#9ca3af",
-                            }}
-                          >
-                            • {estaActivo ? "Activo" : "Inactivo"}
+                          <td className="admin-text-muted">{empleado.apellido}</td>
+                        <td className="admin-text-muted">{empleado.email}</td>
+                        <td className="admin-text-muted">${empleado.salario}</td>
+                        <td>
+                          <span className={`admin-badge ${estaActivo ? "admin-badge--green" : "admin-badge--slate"}`}>
+                            {estaActivo ? "Activo" : "Inactivo"}
                           </span>
                         </td>
                         <td className="px-6 py-5">
@@ -448,30 +367,15 @@ export default function Empleados() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-5 flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(empleado)}
-                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
-                          style={{
-                            background: "rgba(59, 130, 246, 0.15)",
-                            border: "1px solid rgba(59, 130, 246, 0.3)",
-                          }}
-                          title="Editar"
-                        >
+                        <td className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                        <button type="button" onClick={() => handleOpenEdit(empleado)} className="admin-btn admin-btn-icon admin-btn-secondary" title="Editar">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                           </svg>
                         </button>
-                          <button
-                            onClick={() => handleDeleteEmpleado(empleado._id)}
-                            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15 cursor-pointer"
-                            style={{
-                              background: "rgba(239, 68, 68, 0.15)",
-                              border: "1px solid rgba(239, 68, 68, 0.3)",
-                            }}
-                            title="Eliminar"
-                          >
+                          <button type="button" onClick={() => handleDeleteEmpleado(empleado._id)} className="admin-btn admin-btn-icon admin-btn-danger" title="Eliminar">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <polyline points="3 6 5 6 21 6"></polyline>
                               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -479,48 +383,32 @@ export default function Empleados() {
                               <line x1="14" y1="11" x2="14" y2="17"></line>
                             </svg>
                           </button>
+                        </div>
                         </td>
                       </tr>
                     {/* Expanded Row for Services */}
                     {expandedRows[empleado._id] && (
                       <tr>
-                        <td colSpan="7" className="p-0 border-b border-white/5">
-                          <div 
-                            className="w-full px-6 py-5 flex flex-col gap-3"
-                            style={{
-                              background: "rgba(255, 255, 255, 0.02)",
-                              boxShadow: "inset 0 4px 6px -4px rgba(0, 0, 0, 0.1)"
-                            }}
-                          >
+                        <td colSpan="7" className="p-0 border-b border-slate-100">
+                          <div className="w-full px-6 py-5 flex flex-col gap-3 bg-slate-50">
                             <div className="flex items-center gap-2">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
                                 <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                               </svg>
-                              <span className="text-xs font-bold text-white/50 uppercase tracking-wider">Servicios Asignados a {empleado.nombre}</span>
+                              <span className="text-xs font-bold admin-text-muted uppercase tracking-wider">Servicios Asignados a {empleado.nombre}</span>
                             </div>
-                            
                             {empleado.services && empleado.services.length > 0 ? (
                               <div className="flex flex-wrap gap-2.5">
                                 {empleado.services.map(srv => (
-                                  <div 
-                                    key={srv._id || srv} 
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-[1.02]"
-                                    style={{
-                                      background: "linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(52, 211, 153, 0.1) 100%)",
-                                      border: "1px solid rgba(16, 185, 129, 0.3)",
-                                      color: "#34d399",
-                                      boxShadow: "0 2px 10px rgba(16, 185, 129, 0.05)"
-                                    }}
-                                  >
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                  <span key={srv._id || srv} className="admin-badge admin-badge--green">
                                     {srv.nameService || 'Servicio Desconocido'}
-                                  </div>
+                                  </span>
                                 ))}
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2 px-3 py-2 rounded-lg w-fit" style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.1)" }}>
-                                <span className="text-sm text-white/40 italic">Sin servicios asignados por el momento</span>
+                              <div className="flex items-center gap-2 px-3 py-2 rounded-lg w-fit border border-dashed border-slate-300 bg-white">
+                                <span className="text-sm admin-text-muted italic">Sin servicios asignados por el momento</span>
                               </div>
                             )}
                           </div>
@@ -541,27 +429,27 @@ export default function Empleados() {
             {loading ? (
               <CardsLoadingGrid />
             ) : empleados.length === 0 ? (
-              <p className="col-span-full py-8 text-center text-white/50">No hay empleados registrados</p>
+              <p className="col-span-full admin-empty">No hay empleados registrados</p>
             ) : empleados.map((empleado) => {
               const estaActivo = empleado.status === true
               return (
-                <article key={empleado._id} className="rounded-2xl p-5 border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <article key={empleado._id} className="admin-card admin-card-padded">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="font-bold text-white truncate">{empleado.nombre} {empleado.apellido}</h3>
-                      <p className="text-sm text-white/60 mt-1 break-all">{empleado.email}</p>
+                      <h3 className="font-bold text-slate-900 truncate">{empleado.nombre} {empleado.apellido}</h3>
+                      <p className="text-sm admin-text-muted mt-1 break-all">{empleado.email}</p>
                     </div>
-                    <span className="shrink-0 rounded-full px-2 py-1 text-xs font-semibold" style={{ background: estaActivo ? "rgba(16,185,129,0.2)" : "rgba(107,114,128,0.2)", color: estaActivo ? "#34d399" : "#d1d5db" }}>{estaActivo ? "Activo" : "Inactivo"}</span>
+                    <span className={`admin-badge shrink-0 ${estaActivo ? "admin-badge--green" : "admin-badge--slate"}`}>{estaActivo ? "Activo" : "Inactivo"}</span>
                   </div>
-                  <p className="mt-3 text-sm text-white/60">Salario: <span className="text-white">${empleado.salario}</span></p>
+                  <p className="mt-3 text-sm admin-text-muted">Salario: <span className="text-slate-900">${empleado.salario}</span></p>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {(empleado.services || []).length > 0 ? empleado.services.map((service) => (
-                      <span key={service._id || service} className="rounded-md px-2 py-1 text-xs bg-emerald-500/10 text-emerald-300">{service.nameService || "Servicio"}</span>
-                    )) : <span className="text-xs text-white/40">Sin servicios asignados</span>}
+                      <span key={service._id || service} className="admin-badge admin-badge--green">{service.nameService || "Servicio"}</span>
+                    )) : <span className="text-xs admin-text-muted">Sin servicios asignados</span>}
                   </div>
                   <div className="mt-5 flex gap-2">
-                    <button onClick={() => handleOpenEdit(empleado)} className="flex-1 rounded-xl py-2 text-sm font-semibold bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">Editar</button>
-                    <button onClick={() => handleDeleteEmpleado(empleado._id)} className="flex-1 rounded-xl py-2 text-sm font-semibold bg-red-500/10 text-red-300 hover:bg-red-500/20">Eliminar</button>
+                    <AdminSecondaryButton onClick={() => handleOpenEdit(empleado)} className="flex-1 justify-center">Editar</AdminSecondaryButton>
+                    <button type="button" onClick={() => handleDeleteEmpleado(empleado._id)} className="admin-btn admin-btn-danger flex-1 justify-center">Eliminar</button>
                   </div>
                 </article>
               )
@@ -569,178 +457,60 @@ export default function Empleados() {
           </div>
         )}
 
-        {/* Paginación */}
-        <div className="flex items-center justify-between w-full mt-2 text-sm text-white/70 px-2">
+        <div className="flex items-center justify-between w-full mt-2 text-sm admin-text-muted px-2">
           <div className="flex items-center gap-2">
             <span>Mostrar</span>
-            <select
-              value={limit}
-              onChange={(e) => {
-                setLimit(Number(e.target.value))
-                setPage(1)
-              }}
-              className="bg-white/10 border border-white/20 rounded px-2 py-1 outline-none focus:border-emerald-400"
-            >
-              <option value={4} className="text-black">4</option>
-              <option value={10} className="text-black">10</option>
-              <option value={20} className="text-black">20</option>
+            <select value={limit} onChange={(e) => { setLimit(Number(e.target.value)); setPage(1) }} className="admin-input w-auto py-1 px-2">
+              <option value={4}>4</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
             </select>
             <span>registros</span>
           </div>
           <div className="flex items-center gap-4">
             <span>Página {page} de {totalPages || 1} ({total} en total)</span>
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 transition-colors"
-              >
-                Anterior
-              </button>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages || totalPages === 0}
-                className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 transition-colors"
-              >
-                Siguiente
-              </button>
+              <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="admin-btn admin-btn-secondary px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed">Anterior</button>
+              <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages || totalPages === 0} className="admin-btn admin-btn-secondary px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed">Siguiente</button>
             </div>
           </div>
         </div>
 
-      </main>
-
-      {/* MODAL: Agregar Nuevo Empleado */}
       {showModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4"
-          style={{ zIndex: 100 }}
-        >
-          {/* Overlay oscuro */}
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={handleCloseModal}
-          />
-
-          {/* Contenido del modal */}
-          <div
-            className="relative w-full max-w-[620px] rounded-2xl p-8 animate-fade-in-up max-h-[90vh] overflow-y-auto"
-            style={{
-              background: "linear-gradient(135deg, rgba(200, 200, 210, 0.85) 0%, rgba(180, 180, 195, 0.80) 100%)",
-              backdropFilter: "blur(40px)",
-              WebkitBackdropFilter: "blur(40px)",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
-              boxShadow: "0 25px 60px rgba(0,0,0,0.5)",
-            }}
-          >
-            {/* Header del modal */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                {formData.id ? "Editar Empleado" : "Agregar Nuevo Empleado"}
-              </h2>
-              <button
-                onClick={handleCloseModal}
-                disabled={saving}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/10 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div className="admin-modal-overlay" onClick={handleCloseModal}>
+          <div className="admin-modal max-h-[90vh] overflow-y-auto" style={{ maxWidth: "620px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">{formData.id ? "Editar Empleado" : "Agregar Nuevo Empleado"}</h2>
+              <button type="button" onClick={handleCloseModal} disabled={saving} className="admin-btn admin-btn-icon admin-btn-secondary disabled:opacity-50">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-
-            {/* Campo: Nombre */}
-            <div className="mb-5">
-              <label className="block text-sm font-semibold text-gray-800 mb-2">Nombre</label>
-              <input
-                type="text"
-                value={formData.nombre}
-                onChange={(e) => handleFieldChange("nombre", e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
-                style={{
-                  background: "rgba(255,255,255,0.5)",
-                  border: errors.nombre ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
-                }}
-              />
-              {errors.nombre && (
-                <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
-              )}
-            </div>
-
-            {/* Campo: Apellido */}
-            <div className="mb-5">
-              <label className="block text-sm font-semibold text-gray-800 mb-2">Apellido</label>
-              <input
-                type="text"
-                value={formData.apellido}
-                onChange={(e) => handleFieldChange("apellido", e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
-                style={{
-                  background: "rgba(255,255,255,0.5)",
-                  border: errors.apellido ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
-                }}
-              />
-              {errors.apellido && (
-                <p className="text-red-500 text-xs mt-1">{errors.apellido}</p>
-              )}
-            </div>
-
-            {/* Campo: Correo */}
-            <div className="mb-5">
-              <label className="block text-sm font-semibold text-gray-800 mb-2">Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleFieldChange("email", e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
-                style={{
-                  background: "rgba(255,255,255,0.5)",
-                  border: errors.email ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
-                }}
-              />
-              {errors.email && (
-                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Fila: Contraseña y Salario */}
-            <div className="grid grid-cols-2 gap-4 mb-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">Contraseña</label>
-                <input
-                  type="password"
-                  autoComplete="new-password"
-                  value={formData.contraseña}
-                  onChange={(e) => handleFieldChange("contraseña", e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
-                  style={{
-                    background: "rgba(255,255,255,0.5)",
-                    border: errors.contraseña ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
-                  }}
-                />
-                {errors.contraseña && (
-                  <p className="text-red-500 text-xs mt-1">{errors.contraseña}</p>
-                )}
+            <div className="admin-modal-body">
+              <label className="admin-label mb-5 block">Nombre
+                <input type="text" value={formData.nombre} onChange={(e) => handleFieldChange("nombre", e.target.value)} className={`admin-input ${errors.nombre ? "border-red-400" : ""}`} />
+                {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
+              </label>
+              <label className="admin-label mb-5 block">Apellido
+                <input type="text" value={formData.apellido} onChange={(e) => handleFieldChange("apellido", e.target.value)} className={`admin-input ${errors.apellido ? "border-red-400" : ""}`} />
+                {errors.apellido && <p className="text-red-500 text-xs mt-1">{errors.apellido}</p>}
+              </label>
+              <label className="admin-label mb-5 block">Email
+                <input type="email" value={formData.email} onChange={(e) => handleFieldChange("email", e.target.value)} className={`admin-input ${errors.email ? "border-red-400" : ""}`} />
+                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+              </label>
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <label className="admin-label">Contraseña
+                  <input type="password" autoComplete="new-password" value={formData.contraseña} onChange={(e) => handleFieldChange("contraseña", e.target.value)} className={`admin-input ${errors.contraseña ? "border-red-400" : ""}`} />
+                  {errors.contraseña && <p className="text-red-500 text-xs mt-1">{errors.contraseña}</p>}
+                </label>
+                <label className="admin-label">Salario
+                  <input type="text" value={formData.salario} onChange={(e) => handleFieldChange("salario", e.target.value)} placeholder="$0.00" className={`admin-input ${errors.salario ? "border-red-400" : ""}`} />
+                  {errors.salario && <p className="text-red-500 text-xs mt-1">{errors.salario}</p>}
+                </label>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">Salario</label>
-                <input
-                  type="text"
-                  value={formData.salario}
-                  onChange={(e) => handleFieldChange("salario", e.target.value)}
-                  placeholder="$0.00"
-                  className="w-full px-4 py-2.5 rounded-lg text-sm text-gray-900 outline-none transition-all duration-200 focus:ring-2 focus:ring-emerald-400"
-                  style={{
-                    background: "rgba(255,255,255,0.5)",
-                    border: errors.salario ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(0,0,0,0.1)",
-                  }}
-                />
-                {errors.salario && (
-                  <p className="text-red-500 text-xs mt-1">{errors.salario}</p>
-                )}
-              </div>
-            </div>
 
             {/* Estado */}
             <div className="flex items-center justify-between mb-6">
@@ -752,11 +522,7 @@ export default function Empleados() {
                 <button
                   onClick={() => setFormData(prev => ({ ...prev, status: !prev.status }))}
                   className="relative w-14 h-7 rounded-full transition-all duration-300 cursor-pointer"
-                  style={{
-                    background: formData.status
-                      ? "linear-gradient(135deg, #10b981, #34d399)"
-                      : "rgba(0,0,0,0.2)",
-                  }}
+                  style={{ background: formData.status ? "#0d9488" : "#cbd5e1" }}
                 >
                   <div
                     className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300"
@@ -781,11 +547,7 @@ export default function Empleados() {
                 <button
                   onClick={() => setFormData(prev => ({ ...prev, verificado: !prev.verificado }))}
                   className="relative w-14 h-7 rounded-full transition-all duration-300 cursor-pointer"
-                  style={{
-                    background: formData.verificado
-                      ? "linear-gradient(135deg, #10b981, #34d399)"
-                      : "rgba(0,0,0,0.2)",
-                  }}
+                  style={{ background: formData.verificado ? "#0d9488" : "#cbd5e1" }}
                 >
                   <div
                     className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300"
@@ -841,44 +603,11 @@ export default function Empleados() {
               </div>
             </div>
 
-            {/* Separador */}
-            <div className="border-t border-black/10 mb-6" />
-
-            {/* Error general de la API */}
-            {apiError && (
-              <div
-                className="mb-4 px-4 py-3 rounded-lg text-sm font-medium text-red-700"
-                style={{
-                  background: "rgba(239, 68, 68, 0.12)",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
-                }}
-              >
-                {apiError}
-              </div>
-            )}
-
-            {/* Botones de accion */}
-            <div className="flex items-center justify-end gap-3">
-              <button
-                onClick={handleCloseModal}
-                disabled={saving}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-black/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: "rgba(255,255,255,0.5)",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveEmpleado}
-                disabled={saving}
-                className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:hover:scale-100 disabled:cursor-not-allowed"
-                style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-                  boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)",
-                }}
-              >
+            {apiError && <div className="mb-4 px-4 py-3 rounded-lg text-sm font-medium text-red-700 bg-red-50 border border-red-200">{apiError}</div>}
+            </div>
+            <div className="admin-modal-footer">
+              <AdminSecondaryButton onClick={handleCloseModal} disabled={saving}>Cancelar</AdminSecondaryButton>
+              <AdminPrimaryButton onClick={handleSaveEmpleado} disabled={saving} className="gap-2">
                 {saving && (
                   <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
@@ -886,11 +615,11 @@ export default function Empleados() {
                   </svg>
                 )}
                 {saving ? "Guardando..." : formData.id ? "Guardar Cambios" : "Guardar Empleado"}
-              </button>
+              </AdminPrimaryButton>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   )
 }

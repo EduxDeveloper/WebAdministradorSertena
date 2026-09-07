@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import Sidebar from "../../components/ui/Sidebar"
+import AdminLayout, { AdminPageHeader, AdminStatCard, AdminStatGrid } from "../../components/ui/AdminLayout"
 import useAuth from "../../hooks/useAuth"
 import Swal from 'sweetalert2'
 import ViewModeToggle from "../../components/ui/ViewModeToggle"
@@ -47,11 +47,11 @@ export default function Resenias() {
       title: '¿Estás seguro?',
       text: "No podrás revertir esto",
       icon: 'warning',
-      background: "#001a1a",
-      color: "#fff",
+      background: "#ffffff",
+      color: "#0f172a",
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#00E9E9',
+      cancelButtonColor: '#64748b',
       confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     })
@@ -64,9 +64,9 @@ export default function Resenias() {
         title: '¡Eliminado!',
         text: 'La reseña ha sido eliminada.',
         icon: 'success',
-        background: "#001a1a",
-        color: "#fff",
-        confirmButtonColor: '#00E9E9'
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: '#0d9488'
       })
       loadResenias()
     } catch (error) {
@@ -75,8 +75,8 @@ export default function Resenias() {
         title: "Error",
         text: "Hubo un error al eliminar",
         icon: "error",
-        background: "#001a1a",
-        color: "#fff",
+        background: "#ffffff",
+        color: "#0f172a",
         confirmButtonColor: "#00E9E9"
       })
     }
@@ -105,7 +105,7 @@ export default function Resenias() {
             height="16"
             viewBox="0 0 24 24"
             fill={i < rating ? "#fbbf24" : "none"}
-            stroke={i < rating ? "#fbbf24" : "rgba(255,255,255,0.3)"}
+            stroke={i < rating ? "#fbbf24" : "#cbd5e1"}
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -123,166 +123,83 @@ export default function Resenias() {
   }
 
   return (
-    <div className="relative w-full min-h-screen flex text-white bg-[#15354d]">
+    <AdminLayout activeTab="Reseñas">
+        <AdminPageHeader
+          eyebrow="Bienvenido, Administrador"
+          title="Gestión de Reseñas"
+          description="Apartado administrativo de Reseñas"
+        />
 
-      {/* BARRA LATERAL - Componente reutilizable */}
-      <Sidebar activeTab="Reseñas" />
-
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-1 min-w-0 min-h-screen p-8 relative flex flex-col gap-6" style={{ zIndex: 10 }}>
-        {/* Encabezado */}
-        <div>
-          <div className="text-emerald-400 font-medium text-[15px] mb-1">
-            Bienvenido! Administrador
-          </div>
-          <h1 className="text-3xl md:text-[38px] font-bold tracking-tight text-white mb-2 leading-none">
-            Gestión de Reseñas
-          </h1>
-          <p className="text-white/40 text-sm">
-            Apartado administrativo de Reseñas
-          </p>
-        </div>
-
-        {/* Tarjetas de estadísticas */}
-        <div className="grid grid-cols-3 gap-4 w-full">
-          {/* Tarjeta: Rating Promedio */}
-          <div
-            className="rounded-2xl p-6 flex items-center gap-4"
-            style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{
-                background: "rgba(251, 191, 36, 0.2)",
-                border: "1px solid rgba(251, 191, 36, 0.3)",
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+        <AdminStatGrid columns={3}>
+          <AdminStatCard
+            label="Calificación Promedio"
+            value={ratingPromedio}
+            iconTone="amber"
+            icon={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
-            </div>
-            <div>
-              <p className="text-white/50 text-xs font-medium">Calificación Promedio</p>
-              <p className="text-2xl font-bold text-white">{ratingPromedio}</p>
-            </div>
-          </div>
-
-          {/* Tarjeta: Total Reseñas */}
-          <div
-            className="rounded-2xl p-6 flex items-center gap-4"
-            style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{
-                background: "rgba(16, 185, 129, 0.2)",
-                border: "1px solid rgba(16, 185, 129, 0.3)",
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            }
+          />
+          <AdminStatCard
+            label="Total Reseñas"
+            value={reseniasTotales}
+            iconTone="blue"
+            icon={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-            </div>
-            <div>
-              <p className="text-white/50 text-xs font-medium">Total Reseñas</p>
-              <p className="text-2xl font-bold text-white">{reseniasTotales}</p>
-            </div>
-          </div>
-
-          {/* Tarjeta: Tendencias Mensuales */}
-          <div
-            className="rounded-2xl p-6 flex items-center gap-4"
-            style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{
-                background: "rgba(34, 197, 94, 0.2)",
-                border: "1px solid rgba(34, 197, 94, 0.3)",
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            }
+          />
+          <AdminStatCard
+            label="Tendencias Mensuales"
+            value={incrementoMensual}
+            iconTone="green"
+            icon={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="23 6 13.5 15.5 8.5 10.5 1 17" />
                 <polyline points="17 6 23 6 23 12" />
               </svg>
-            </div>
-            <div>
-              <p className="text-white/50 text-xs font-medium">Tendencias Mensuales</p>
-              <p className="text-2xl font-bold text-white">{incrementoMensual}</p>
-            </div>
-          </div>
-        </div>
+            }
+          />
+        </AdminStatGrid>
 
         <div className="flex justify-end">
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
         </div>
 
         {/* Tabla de reseñas */}
-        <div
-          className={`rounded-2xl overflow-hidden w-full ${viewMode === "list" ? "" : "hidden"}`}
-          style={{
-            background: "rgba(255, 255, 255, 0.03)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-          }}
-        >
+        <div className={`admin-card admin-table-wrap ${viewMode === "list" ? "" : "hidden"}`}>
           <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse">
+            <table className="admin-table">
               <thead>
-                <tr className="border-b border-white/10">
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Cliente</th>
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Rating</th>
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Comentarios</th>
-                  <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide text-right">Acciones</th>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Rating</th>
+                  <th>Comentarios</th>
+                  <th className="text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody>
                 {loading ? (
                   <TableLoadingRows columns={4} />
                 ) : resenias.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="px-6 py-5 text-center text-white/50">No hay reseñas registradas</td>
+                    <td colSpan="4" className="admin-empty">No hay reseñas registradas</td>
                   </tr>
                 ) : (
                   resenias.map((resenia) => (
-                    <tr
-                      key={resenia._id}
-                      className="hover:bg-white/[0.03] transition-colors duration-200"
-                    >
-                      <td className="px-6 py-5 text-sm font-medium text-white/90">{getCustomerName(resenia.idCustomer)}</td>
-                      <td className="px-6 py-5 text-sm">
-                        {renderStars(resenia.rating)}
-                      </td>
-                      <td className="px-6 py-5 text-sm text-white/60">
-                        {resenia.comment}
-                      </td>
-                      <td className="px-6 py-5 text-right">
+                    <tr key={resenia._id}>
+                      <td className="font-medium text-slate-900">{getCustomerName(resenia.idCustomer)}</td>
+                      <td>{renderStars(resenia.rating)}</td>
+                      <td className="admin-text-muted">{resenia.comment}</td>
+                      <td className="text-right">
                         <button
                           onClick={() => handleDeleteResenia(resenia._id)}
-                          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-red-500/20 cursor-pointer ml-auto"
-                          style={{
-                            background: "rgba(255, 255, 255, 0.08)",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
-                          }}
+                          className="admin-btn admin-btn-icon admin-btn-danger ml-auto"
                           title="Eliminar reseña"
                         >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                             <line x1="10" y1="11" x2="10" y2="17" />
@@ -303,24 +220,23 @@ export default function Resenias() {
             {loading ? (
               <CardsLoadingGrid />
             ) : resenias.length === 0 ? (
-              <p className="col-span-full py-8 text-center text-white/50">No hay reseñas registradas</p>
+              <p className="col-span-full admin-empty">No hay reseñas registradas</p>
             ) : resenias.map((resenia) => (
-              <article key={resenia._id} className="rounded-2xl p-5 border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+              <article key={resenia._id} className="admin-card admin-card-padded">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-bold text-white">{getCustomerName(resenia.idCustomer)}</h3>
+                    <h3 className="font-bold text-slate-900">{getCustomerName(resenia.idCustomer)}</h3>
                     <div className="mt-2">{renderStars(resenia.rating)}</div>
                   </div>
-                  <button onClick={() => handleDeleteResenia(resenia._id)} className="rounded-lg px-3 py-2 text-xs font-semibold text-red-300 bg-red-500/10 hover:bg-red-500/20">Eliminar</button>
+                  <button type="button" onClick={() => handleDeleteResenia(resenia._id)} className="admin-btn admin-btn-danger text-xs px-3 py-2">Eliminar</button>
                 </div>
-                <p className="mt-4 text-sm leading-relaxed text-white/65">{resenia.comment || "Sin comentario"}</p>
+                <p className="mt-4 text-sm leading-relaxed admin-text-muted">{resenia.comment || "Sin comentario"}</p>
               </article>
             ))}
           </div>
         )}
 
-        {/* Paginación */}
-        <div className="flex items-center justify-between w-full mt-2 text-sm text-white/70 px-2">
+        <div className="flex items-center justify-between w-full mt-2 text-sm admin-text-muted px-2">
           <div className="flex items-center gap-2">
             <span>Mostrar</span>
             <select
@@ -329,11 +245,11 @@ export default function Resenias() {
                 setLimit(Number(e.target.value))
                 setPage(1)
               }}
-              className="bg-white/10 border border-white/20 rounded px-2 py-1 outline-none focus:border-emerald-400"
+              className="admin-input w-auto py-1 px-2"
             >
-              <option value={4} className="text-black">4</option>
-              <option value={10} className="text-black">10</option>
-              <option value={20} className="text-black">20</option>
+              <option value={4}>4</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
             </select>
             <span>registros</span>
           </div>
@@ -341,16 +257,18 @@ export default function Resenias() {
             <span>Página {page} de {totalPages || 1} ({total} en total)</span>
             <div className="flex items-center gap-1">
               <button
+                type="button"
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 transition-colors"
+                className="admin-btn admin-btn-secondary px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Anterior
               </button>
               <button
+                type="button"
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages || totalPages === 0}
-                className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10 transition-colors"
+                className="admin-btn admin-btn-secondary px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Siguiente
               </button>
@@ -358,7 +276,6 @@ export default function Resenias() {
           </div>
         </div>
 
-      </main>
-    </div>
+    </AdminLayout>
   )
 }

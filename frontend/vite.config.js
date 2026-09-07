@@ -6,7 +6,15 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 // Configuracion principal de Vite
-// Aqui le decimos que use los plugins de React y Tailwind
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 })

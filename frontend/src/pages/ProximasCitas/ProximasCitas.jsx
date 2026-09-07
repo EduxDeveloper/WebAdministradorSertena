@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import Sidebar from "../../components/ui/Sidebar"
+import AdminLayout, { AdminPageHeader, AdminPrimaryButton, AdminSecondaryButton, AdminStatCard, AdminStatGrid } from "../../components/ui/AdminLayout"
 import useAuth from "../../hooks/useAuth"
 import Swal from "sweetalert2"
 import { CardsLoadingGrid, TableLoadingRows } from "../../components/ui/LoadingSkeleton"
@@ -87,7 +87,11 @@ const mapCitaFromApi = (cita) => ({
   empleado: [cita.idEmpleado?.nombre || cita.idEmpleado?.name, cita.idEmpleado?.apellido || cita.idEmpleado?.lastName].filter(Boolean).join(" ") || "Sin asignar",
   fecha: formatCitaRange(cita.dateStart, cita.dateEnd),
   precio: String(cita.finalPrice || "0"),
-  estado: cita.status === "Pendiente" ? "Programado" : (cita.status || "Programado"),
+  estado: cita.isCompleted === true || cita.status === "Finalizado"
+    ? "Finalizado"
+    : cita.status === "Pendiente"
+      ? "Programado"
+      : (cita.status || "Programado"),
   isCompleted: cita.isCompleted === true || cita.status === "Finalizado",
   completionNotes: cita.completionNotes || "",
   ubicacion: cita.clientLocation || "No especificada",
@@ -179,12 +183,7 @@ function LegacyDatePicker({ value, onChange, label, error }) {
 
       {showPicker && (
         <div
-          className="absolute top-full left-0 mt-2 p-4 rounded-lg shadow-lg z-50"
-          style={{
-            background: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(10px)",
-            border: "1px solid rgba(0, 0, 0, 0.1)",
-          }}
+          className="absolute top-full left-0 mt-2 p-4 rounded-lg shadow-lg z-50 bg-white border border-slate-200"
         >
           {/* Header del calendario */}
           <div className="flex items-center justify-between mb-4">
@@ -314,13 +313,23 @@ export default function ProximasCitas() {
   const [limit, setLimit] = useState(6)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [summary, setSummary] = useState({
+    activas: 0,
+    programadas: 0,
+    atrasadas: 0,
+    finalizadas: 0,
+    ingresosProyectados: 0,
+  })
   const [viewMode, setViewMode] = useState("list")
   const { fetchApi } = useAuth()
 
   useEffect(() => {
-    loadCitas()
     loadEmpleados()
-  }, [page, limit])
+  }, [])
+
+  useEffect(() => {
+    loadCitas()
+  }, [page, limit, filterStatus])
 
   async function loadEmpleados() {
     try {
@@ -334,22 +343,34 @@ export default function ProximasCitas() {
   async function loadCitas() {
     try {
       setLoading(true)
+      const statusQuery = filterStatus === "Todas" ? "" : `&status=${encodeURIComponent(filterStatus)}`
       const [result, calendarResult] = await Promise.all([
-        fetchApi(`/proyects/paginado?page=${page}&limit=${limit}`),
+        fetchApi(`/proyects/paginado?page=${page}&limit=${limit}${statusQuery}`),
         fetchApi("/proyects"),
       ])
       const data = result?.data || []
-      // Mapear los datos del backend a la estructura que espera la UI
       const mappedCitas = (data || []).map(mapCitaFromApi)
       setCitas(mappedCitas)
       setCalendarCitas((Array.isArray(calendarResult) ? calendarResult : []).map(mapCitaFromApi))
       setTotal(result?.total || 0)
       setTotalPages(result?.totalPages || 1)
+      setSummary(result?.summary || {
+        activas: 0,
+        programadas: 0,
+        atrasadas: 0,
+        finalizadas: 0,
+        ingresosProyectados: 0,
+      })
     } catch (error) {
       console.error("Error al cargar citas:", error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleFilterChange = (status) => {
+    setFilterStatus(status)
+    setPage(1)
   }
 
   // Estado del formulario del modal para editar una cita
@@ -435,18 +456,6 @@ export default function ProximasCitas() {
     return Object.keys(newErrors).length === 0
   }
 
-  // Datos quemados de citas
-  // Contar citas por estado
-  const citasActivas = citas.filter(c => c.estado !== "Finalizado").length
-  const citasProgramadas = citas.filter(c => c.estado === "Programado").length
-  const citasIngresos = citas.reduce((sum, c) => {
-    // Manejar casos donde precio no sea string o no tenga formato válido
-    const precioStr = typeof c.precio === 'string' ? c.precio : String(c.precio || "")
-    const num = parseInt(precioStr.replace(/[^0-9]/g, ""))
-    return sum + (isNaN(num) ? 0 : num)
-  }, 0)
-
-  // Abrir modal de detalles
   const handleOpenDetails = (cita) => {
     setSelectedCita(cita)
     setShowDetailsModal(true)
@@ -529,17 +538,12 @@ export default function ProximasCitas() {
         icon: "error",
         title: "Error al guardar",
         text: error.message || "No se pudo guardar la cita. Intenta nuevamente.",
-        background: "#15354d",
-        color: "#fff",
-        confirmButtonColor: "#10b981",
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: "#0d9488",
       })
     }
   }
-
-  // Filtrar citas por estado
-  const citasFiltradas = filterStatus === "Todas" 
-    ? citas 
-    : citas.filter(c => c.estado === filterStatus)
 
   const empleadosElegibles = empleados.filter((empleado) =>
     empleado.status === true && (empleado.services || []).some((service) =>
@@ -603,133 +607,44 @@ export default function ProximasCitas() {
   }
 
   const citasDelDiaSeleccionado = getCitasDelDia()
+  const periodoLabel = calendarMonth.toLocaleString("es-ES", { month: "long", year: "numeric" })
+  const periodoFormatted = periodoLabel.charAt(0).toUpperCase() + periodoLabel.slice(1)
 
   return (
-    <div className="relative w-full min-h-screen flex text-white bg-[#15354d]">
+    <AdminLayout activeTab="Proximas citas">
+        <AdminPageHeader
+          eyebrow="Bienvenido, Administrador"
+          title="Gestión de Citas"
+          description="Consulta, reasigna y finaliza las citas programadas."
+        />
 
-      {/* BARRA LATERAL - Componente reutilizable */}
-      <Sidebar activeTab="Proximas citas" />
-
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-1 min-w-0 min-h-screen p-4 sm:p-6 lg:p-8 relative flex flex-col gap-6" style={{ zIndex: 10 }}>
-        {/* Encabezado */}
-        <div>
-          <div className="text-emerald-400 font-medium text-[15px] mb-1">
-            Bienvenido! Administrador
-          </div>
-          <h1 className="text-3xl md:text-[38px] font-bold tracking-tight text-white mb-2 leading-none">
-            Gestión de Citas
-          </h1>
-          <p className="text-white/40 text-sm">
-            Consulta, reasigna y finaliza las citas programadas.
-          </p>
-        </div>
-
-        {/* Tarjetas de estadísticas */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4 w-full">
-          {/* Tarjeta: Total Citas Activas */}
-          <div
-            className="rounded-2xl p-6 flex items-center gap-4"
-            style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{
-                background: "rgba(34, 197, 94, 0.2)",
-                border: "1px solid rgba(34, 197, 94, 0.3)",
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-3h2l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-white/50 text-xs font-medium">Total de Citas Activas</p>
-              <p className="text-2xl font-bold text-white">{citasActivas}</p>
-            </div>
-          </div>
-
-          {/* Tarjeta: Citas Programadas */}
-          <div
-            className="rounded-2xl p-6 flex items-center gap-4"
-            style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{
-                background: "rgba(59, 130, 246, 0.2)",
-                border: "1px solid rgba(59, 130, 246, 0.3)",
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-white/50 text-xs font-medium">Citas Programadas</p>
-              <p className="text-2xl font-bold text-white">{citasProgramadas}</p>
-            </div>
-          </div>
-
-          {/* Tarjeta: Ingresos proyectados */}
-          <div
-            className="rounded-2xl p-6 flex items-center gap-4"
-            style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{
-                background: "rgba(34, 197, 94, 0.2)",
-                border: "1px solid rgba(34, 197, 94, 0.3)",
-              }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="1" />
-                <circle cx="19" cy="12" r="1" />
-                <circle cx="5" cy="12" r="1" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-white/50 text-xs font-medium">Ingresos proyectados</p>
-              <p className="text-2xl font-bold text-white">${citasIngresos.toLocaleString()}</p>
-            </div>
-          </div>
-
-          {/* Tarjeta: Año */}
-          <div
-            className="rounded-2xl p-6 flex items-center justify-between"
-            style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-            }}
-          >
-            <div>
-              <p className="text-white/50 text-xs font-medium">Período</p>
-              <p className="text-lg font-bold text-white">Octubre 2026</p>
-            </div>
-          </div>
-        </div>
+        <AdminStatGrid columns={4}>
+          <AdminStatCard
+            label="Total de Citas Activas"
+            value={summary.activas}
+            iconTone="green"
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-3h2l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>}
+          />
+          <AdminStatCard
+            label="Citas Programadas"
+            value={summary.programadas}
+            iconTone="blue"
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>}
+          />
+          <AdminStatCard
+            label="Ingresos proyectados"
+            value={`$${Math.round(summary.ingresosProyectados).toLocaleString()}`}
+            iconTone="green"
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>}
+          />
+          <AdminStatCard
+            label="Período"
+            value={periodoFormatted}
+            valueSize="md"
+            iconTone="slate"
+            icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>}
+          />
+        </AdminStatGrid>
 
         {/* Contenedor principal con tabla y calendario */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 flex-1">
@@ -737,123 +652,68 @@ export default function ProximasCitas() {
           <div className="xl:col-span-2">
             {/* Filtros */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <div className="flex flex-wrap gap-2">
+              <div className="admin-tabs flex-wrap">
                 {["Todas", "Programado", "Finalizado", "Atrasado"].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setFilterStatus(status)}
-                  className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
-                    filterStatus === status
-                      ? "bg-emerald-500 text-white"
-                      : "bg-white/10 text-white/60 hover:bg-white/20"
-                  }`}
-                >
-                  {status}
-                </button>
+                <button key={status} type="button" onClick={() => handleFilterChange(status)} className={`admin-tab ${filterStatus === status ? "admin-tab--active" : ""}`}>{status}</button>
                 ))}
               </div>
-              <div className="inline-flex rounded-xl overflow-hidden border border-white/10 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("list")}
-                  className={`px-3 py-2 text-xs font-semibold ${viewMode === "list" ? "bg-emerald-500 text-white" : "bg-white/10 text-white/60"}`}
-                >
-                  Lista
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("cards")}
-                  className={`px-3 py-2 text-xs font-semibold ${viewMode === "cards" ? "bg-emerald-500 text-white" : "bg-white/10 text-white/60"}`}
-                >
-                  Tarjetas
-                </button>
+              <div className="admin-tabs self-start sm:self-auto">
+                <button type="button" onClick={() => setViewMode("list")} className={`admin-tab ${viewMode === "list" ? "admin-tab--active" : ""}`}>Lista</button>
+                <button type="button" onClick={() => setViewMode("cards")} className={`admin-tab ${viewMode === "cards" ? "admin-tab--active" : ""}`}>Tarjetas</button>
               </div>
             </div>
 
             {viewMode === "list" ? (
-            <div
-              className="rounded-2xl overflow-hidden w-full"
-              style={{
-                background: "rgba(255, 255, 255, 0.03)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              }}
-            >
+            <div className="admin-card admin-table-wrap">
               <div className="overflow-x-auto w-full">
-                <table className="w-full text-left border-collapse">
+                <table className="admin-table">
                   <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Servicio & Cliente</th>
-                      <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Fecha</th>
-                      <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Precio/Estatus</th>
-                      <th className="px-6 py-5 text-[13px] text-white/70 font-semibold tracking-wide">Acciones</th>
+                    <tr>
+                      <th>Servicio & Cliente</th>
+                      <th>Fecha</th>
+                      <th>Precio/Estatus</th>
+                      <th>Acciones</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody>
                     {loading ? (
                       <TableLoadingRows columns={4} />
-                    ) : citasFiltradas.length === 0 ? (
+                    ) : citas.length === 0 ? (
                       <tr>
-                        <td colSpan="4" className="px-6 py-5 text-center text-white/50">No hay citas registradas</td>
+                        <td colSpan="4" className="admin-empty">No hay citas registradas</td>
                       </tr>
                     ) : (
-                      citasFiltradas.map((cita) => (
-                        <tr
-                          key={cita.id}
-                          className="hover:bg-white/[0.03] transition-colors duration-200"
-                        >
-                          <td className="px-6 py-5">
+                      citas.map((cita) => (
+                        <tr key={cita.id}>
+                          <td>
                             <div>
-                              <p className="text-sm font-medium text-white/90">{cita.servicio}</p>
-                              <p className="text-xs text-white/50">{cita.cliente}</p>
-                              <p className="text-xs text-emerald-300">Técnico: {cita.empleado}</p>
+                              <p className="font-medium text-slate-900">{cita.servicio}</p>
+                              <p className="text-xs admin-text-muted">{cita.cliente}</p>
+                              <p className="text-xs text-teal-700">Técnico: {cita.empleado}</p>
                             </div>
                           </td>
-                          <td className="px-6 py-5 text-sm text-white/60">{cita.fecha}</td>
-                          <td className="px-6 py-5 text-sm">
+                          <td className="admin-text-muted">{cita.fecha}</td>
+                          <td>
                             <div>
-                              <p className="text-white/90">{cita.precio}</p>
-                              <span
-                                className="text-xs px-2 py-1 rounded-full inline-block mt-1"
-                                style={{
-                                  background: getStatusColors(cita.estado).background,
-                                  color: getStatusColors(cita.estado).color,
-                                }}
-                              >
-                                {cita.estado}
-                              </span>
+                              <p className="text-slate-900">{cita.precio}</p>
+                              <span className="admin-badge mt-1" style={{ color: getStatusColors(cita.estado).color, background: getStatusColors(cita.estado).background }}>{cita.estado}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-5 flex gap-2">
-                            <button
-                              onClick={() => handleOpenDetails(cita)}
-                              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15"
-                              style={{
-                                background: "rgba(255, 255, 255, 0.08)",
-                                border: "1px solid rgba(255, 255, 255, 0.1)",
-                              }}
-                              title="Ver detalles"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <td>
+                            <div className="flex gap-2">
+                            <button type="button" onClick={() => handleOpenDetails(cita)} className="admin-btn admin-btn-icon admin-btn-secondary" title="Ver detalles">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                                 <circle cx="12" cy="12" r="3" />
                               </svg>
                             </button>
-                            <button
-                              onClick={() => handleOpenEdit(cita)}
-                              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-white/15"
-                              style={{
-                                background: "rgba(255, 255, 255, 0.08)",
-                                border: "1px solid rgba(255, 255, 255, 0.1)",
-                              }}
-                              title="Editar cita"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <button type="button" onClick={() => handleOpenEdit(cita)} className="admin-btn admin-btn-icon admin-btn-secondary" title="Editar cita">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                               </svg>
                             </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -866,26 +726,26 @@ export default function ProximasCitas() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {loading ? (
                   <CardsLoadingGrid />
-                ) : citasFiltradas.length === 0 ? (
+                ) : citas.length === 0 ? (
                   <p className="col-span-full py-8 text-center text-white/50">No hay citas registradas</p>
                 ) : (
-                  citasFiltradas.map((cita) => (
-                    <article key={cita.id} className="rounded-2xl p-5 border border-white/10" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  citas.map((cita) => (
+                    <article key={cita.id} className="admin-card admin-card-padded">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="font-bold text-white">{cita.servicio}</h3>
-                          <p className="text-sm text-white/60 mt-1">{cita.cliente}</p>
+                          <h3 className="font-bold text-slate-900">{cita.servicio}</h3>
+                          <p className="text-sm admin-text-muted mt-1">{cita.cliente}</p>
                         </div>
-                        <span className="text-xs px-2 py-1 rounded-full shrink-0" style={{ background: getStatusColors(cita.estado).background, color: getStatusColors(cita.estado).color }}>{cita.estado}</span>
+                        <span className="admin-badge shrink-0" style={{ background: getStatusColors(cita.estado).background, color: getStatusColors(cita.estado).color }}>{cita.estado}</span>
                       </div>
-                      <div className="mt-4 space-y-1.5 text-sm text-white/65">
+                      <div className="mt-4 space-y-1.5 text-sm admin-text-muted">
                         <p>Fecha: {cita.fecha}</p>
                         <p>Técnico: {cita.empleado}</p>
                         <p>Precio: {cita.precio}</p>
                       </div>
                       <div className="flex gap-2 mt-5">
-                        <button onClick={() => handleOpenDetails(cita)} className="flex-1 rounded-xl py-2 text-sm font-semibold bg-white/10 hover:bg-white/15">Ver</button>
-                        <button onClick={() => handleOpenEdit(cita)} className="flex-1 rounded-xl py-2 text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-white">Editar</button>
+                        <AdminSecondaryButton type="button" onClick={() => handleOpenDetails(cita)} className="flex-1 justify-center">Ver</AdminSecondaryButton>
+                        <AdminPrimaryButton type="button" onClick={() => handleOpenEdit(cita)} className="flex-1 justify-center">Editar</AdminPrimaryButton>
                       </div>
                     </article>
                   ))
@@ -893,245 +753,100 @@ export default function ProximasCitas() {
               </div>
             )}
 
-            <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-white/70">
+            <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm admin-text-muted">
               <div className="flex items-center gap-2">
                 <span>Mostrar</span>
-                <select
-                  value={limit}
-                  onChange={(event) => { setLimit(Number(event.target.value)); setPage(1) }}
-                  className="rounded-lg bg-white/10 border border-white/20 px-2 py-1 text-white outline-none"
-                >
-                  <option value={6} className="text-black">6</option>
-                  <option value={12} className="text-black">12</option>
-                  <option value={24} className="text-black">24</option>
+                <select value={limit} onChange={(event) => { setLimit(Number(event.target.value)); setPage(1) }} className="admin-input w-auto py-1 px-2">
+                  <option value={6}>6</option>
+                  <option value={12}>12</option>
+                  <option value={24}>24</option>
                 </select>
                 <span>de {total} citas</span>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} className="px-3 py-1.5 rounded-lg bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
+                <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} className="admin-btn admin-btn-secondary px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">Anterior</button>
                 <span>Página {page} de {totalPages}</span>
-                <button onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page >= totalPages} className="px-3 py-1.5 rounded-lg bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed">Siguiente</button>
+                <button type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page >= totalPages} className="admin-btn admin-btn-secondary px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">Siguiente</button>
               </div>
             </div>
           </div>
 
-          {/* Calendario y próximos eventos */}
           <div className="flex flex-col gap-4">
-            {/* Calendario */}
-            <div
-              className="rounded-2xl p-6"
-              style={{
-                background: "rgba(255, 255, 255, 0.03)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              }}
-            >
-              <h3 className="text-white font-semibold mb-6 text-center">Calendario</h3>
-              
-              {/* Header del calendario con navegación */}
+            <div className="admin-card admin-card-padded">
+              <h3 className="text-slate-900 font-semibold mb-6 text-center">Calendario</h3>
               <div className="flex items-center justify-between mb-6">
-                <button
-                  onClick={handlePreviousMonth}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/20 transition-all duration-200 active:scale-95"
-                  title="Mes anterior"
-                  style={{
-                    background: "rgba(255, 255, 255, 0.1)",
-                    border: "1px solid rgba(255, 255, 255, 0.2)",
-                  }}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
+                <button type="button" onClick={handlePreviousMonth} className="admin-btn admin-btn-icon admin-btn-secondary" title="Mes anterior">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="15 18 9 12 15 6" /></svg>
                 </button>
-                <span className="text-white/90 text-sm font-bold capitalize flex-1 text-center">
+                <span className="text-slate-900 text-sm font-bold capitalize flex-1 text-center">
                   {calendarMonth.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).charAt(0).toUpperCase() + calendarMonth.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).slice(1)}
                 </span>
-                <button
-                  onClick={handleNextMonth}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/20 transition-all duration-200 active:scale-95"
-                  title="Mes siguiente"
-                  style={{
-                    background: "rgba(255, 255, 255, 0.1)",
-                    border: "1px solid rgba(255, 255, 255, 0.2)",
-                  }}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
+                <button type="button" onClick={handleNextMonth} className="admin-btn admin-btn-icon admin-btn-secondary" title="Mes siguiente">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="9 18 15 12 9 6" /></svg>
                 </button>
               </div>
-              
-              {/* Días de la semana */}
               <div className="grid grid-cols-7 gap-2 mb-3">
                 {dayLabels.map((day) => (
-                  <div key={day} className="text-center text-xs text-white/60 font-semibold h-8 flex items-center justify-center">
-                    {day}
-                  </div>
+                  <div key={day} className="text-center text-xs admin-text-muted font-semibold h-8 flex items-center justify-center">{day}</div>
                 ))}
               </div>
-
-              {/* Días del mes */}
               <div className="grid grid-cols-7 gap-2">
                 {calendarDays.map((day, index) => {
-                  const isSelected = selectedDate && 
-                    selectedDate.getDate() === day &&
-                    selectedDate.getMonth() === calendarMonth.getMonth() &&
-                    selectedDate.getFullYear() === calendarMonth.getFullYear()
-                  
+                  const isSelected = selectedDate && selectedDate.getDate() === day && selectedDate.getMonth() === calendarMonth.getMonth() && selectedDate.getFullYear() === calendarMonth.getFullYear()
                   const today = new Date()
-                  const isToday = day && 
-                    day === today.getDate() &&
-                    calendarMonth.getMonth() === today.getMonth() &&
-                    calendarMonth.getFullYear() === today.getFullYear()
-                  
+                  const isToday = day && day === today.getDate() && calendarMonth.getMonth() === today.getMonth() && calendarMonth.getFullYear() === today.getFullYear()
                   const hasCitas = day && calendarCitas.some((cita) => {
                     const citaDate = parseCitaDate(cita.dateStart)
-                    return citaDate
-                      && citaDate.getDate() === day
-                      && citaDate.getMonth() === calendarMonth.getMonth()
-                      && citaDate.getFullYear() === calendarMonth.getFullYear()
+                    return citaDate && citaDate.getDate() === day && citaDate.getMonth() === calendarMonth.getMonth() && citaDate.getFullYear() === calendarMonth.getFullYear()
                   })
-                  
                   return (
-                    <button
-                      key={index}
-                      onClick={() => handleSelectDate(day)}
-                      className={`
-                        h-10 rounded-lg text-sm font-semibold transition-all duration-200 relative
-                        ${day ? "cursor-pointer" : "cursor-default"}
-                        ${isSelected 
-                          ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/50 scale-105" 
-                          : isToday
-                          ? "bg-blue-500 text-white font-bold"
-                          : day
-                          ? "bg-white/8 text-white/90 hover:bg-white/15 border border-white/10"
-                          : "opacity-0"
-                        }
-                      `}
-                      disabled={!day}
-                    >
+                    <button key={index} type="button" onClick={() => handleSelectDate(day)} disabled={!day}
+                      className={`h-10 rounded-lg text-sm font-semibold transition relative ${!day ? "opacity-0 cursor-default" : isSelected ? "bg-teal-600 text-white" : isToday ? "bg-teal-50 text-teal-800 border border-teal-200" : "bg-slate-50 text-slate-700 hover:bg-slate-100"}`}>
                       {day}
-                      {hasCitas && !isSelected && (
-                        <span className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                      )}
+                      {hasCitas && !isSelected && <span className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-teal-500 rounded-full" />}
                     </button>
                   )
                 })}
               </div>
-
-              {/* Mostrar fecha seleccionada */}
               {selectedDate && (
-                <div className="mt-6 pt-4 border-t border-white/10">
-                  <p className="text-white/50 text-xs mb-2">Fecha seleccionada:</p>
-                  <p className="text-white font-bold text-sm capitalize">
-                    {selectedDate.toLocaleString('es-ES', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
+                <div className="mt-6 pt-4 border-t border-slate-200">
+                  <p className="admin-text-muted text-xs mb-2">Fecha seleccionada:</p>
+                  <p className="text-slate-900 font-bold text-sm capitalize">
+                    {selectedDate.toLocaleString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Próximos eventos - Citas del día seleccionado */}
-            <div
-              className="rounded-2xl p-6 flex-1"
-              style={{
-                background: "rgba(255, 255, 255, 0.03)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              }}
-            >
-              <h3 className="text-white font-semibold mb-4">
-                {selectedDate 
-                  ? `Citas - ${selectedDate.toLocaleString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`
-                  : "Próximos Eventos"
-                }
+            <div className="admin-card admin-card-padded flex-1">
+              <h3 className="text-slate-900 font-semibold mb-4">
+                {selectedDate ? `Citas - ${selectedDate.toLocaleString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}` : "Próximos Eventos"}
               </h3>
-              
               {citasDelDiaSeleccionado.length > 0 ? (
                 <div className="space-y-3">
                   {citasDelDiaSeleccionado.map((cita) => (
-                    <div
-                      key={cita.id}
-                      className="p-4 rounded-lg border-l-4 transition-all duration-200 hover:scale-105 cursor-pointer"
-                      onClick={() => handleOpenDetails(cita)}
-                      style={{
-                        background: getStatusColors(cita.estado).background,
-                        borderColor: getStatusColors(cita.estado).solid,
-                      }}
-                    >
-                      <p className="text-xs text-white/80 font-semibold mb-2">{cita.servicio}</p>
-                      <p className="text-xs text-white/60 mb-2">{cita.cliente}</p>
-                      <p className="text-xs text-white/50 mb-3">{cita.fecha}</p>
+                    <div key={cita.id} className="admin-list-item flex-col items-stretch cursor-pointer border-l-4" style={{ borderLeftColor: getStatusColors(cita.estado).solid, background: getStatusColors(cita.estado).background }} onClick={() => handleOpenDetails(cita)}>
+                      <p className="text-xs font-semibold text-slate-900 mb-1">{cita.servicio}</p>
+                      <p className="text-xs admin-text-muted mb-2">{cita.cliente}</p>
+                      <p className="text-xs admin-text-subtle mb-3">{cita.fecha}</p>
                       <div className="flex items-center justify-between">
-                        <span
-                          className="text-xs px-2 py-1 rounded font-semibold"
-                          style={{
-                            background: getStatusColors(cita.estado).solid,
-                            color: "white",
-                          }}
-                        >
-                          {cita.estado}
-                        </span>
-                        <span className="text-xs text-white/70 font-bold">{cita.precio}</span>
+                        <span className="admin-badge" style={{ background: getStatusColors(cita.estado).solid, color: "#ffffff" }}>{cita.estado}</span>
+                        <span className="text-xs font-bold text-slate-700">{cita.precio}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="py-8 text-center">
-                  <svg 
-                    width="32" 
-                    height="32" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="rgba(255,255,255,0.3)" 
-                    strokeWidth="1.5"
-                    className="mx-auto mb-3"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  <p className="text-white/40 text-sm">No hay citas para este día</p>
-                </div>
+                <div className="py-8 text-center admin-empty">No hay citas para este día</div>
               )}
             </div>
           </div>
         </div>
-      </main>
 
-      {/* MODAL: Ver Detalles de Cita */}
       {showDetailsModal && selectedCita && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4"
-          style={{ zIndex: 100 }}
-        >
-          {/* Overlay oscuro */}
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={handleCloseDetails}
-          />
-
-          {/* Contenido del modal */}
-          <div
-              className="relative w-full max-w-[600px] rounded-2xl p-5 sm:p-8 max-h-[90vh] overflow-y-auto"
-            style={{
-              background: "linear-gradient(135deg, rgba(200, 200, 210, 0.85) 0%, rgba(180, 180, 195, 0.80) 100%)",
-              backdropFilter: "blur(40px)",
-              WebkitBackdropFilter: "blur(40px)",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
-              boxShadow: "0 25px 60px rgba(0,0,0,0.5)",
-            }}
-          >
-            {/* Header del modal */}
-            <div className="flex items-start justify-between mb-6">
+        <div className="admin-modal-overlay" onClick={handleCloseDetails}>
+          <div className="admin-modal max-h-[90vh] overflow-y-auto" style={{ maxWidth: "600px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{selectedCita.servicio}</h2>
                 <p className="text-sm text-gray-600">{selectedCita.cliente}</p>
@@ -1148,15 +863,9 @@ export default function ProximasCitas() {
               </button>
             </div>
 
-            {/* Fechas */}
+            <div className="admin-modal-body">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div
-                className="p-4 rounded-lg"
-                style={{
-                  background: "rgba(255, 255, 255, 0.3)",
-                  border: "1px solid rgba(0, 0, 0, 0.1)",
-                }}
-              >
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
                 <div className="flex items-center gap-2 text-gray-700 text-sm font-medium mb-1">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -1167,13 +876,7 @@ export default function ProximasCitas() {
                 </div>
                 <p className="text-gray-600 text-sm">{parseCitaDate(selectedCita.dateStart)?.toLocaleDateString('es-ES') || 'Sin fecha'}</p>
               </div>
-              <div
-                className="p-4 rounded-lg"
-                style={{
-                  background: "rgba(255, 255, 255, 0.3)",
-                  border: "1px solid rgba(0, 0, 0, 0.1)",
-                }}
-              >
+              <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
                 <div className="flex items-center gap-2 text-gray-700 text-sm font-medium mb-1">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -1187,13 +890,7 @@ export default function ProximasCitas() {
             </div>
 
             {/* Ubicación y contacto */}
-            <div
-              className="p-4 rounded-lg mb-6"
-              style={{
-                background: "rgba(34, 197, 94, 0.15)",
-                border: "1px solid rgba(34, 197, 94, 0.3)",
-              }}
-            >
+            <div className="p-4 rounded-lg mb-6 bg-emerald-50 border border-emerald-200">
               <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
@@ -1207,100 +904,48 @@ export default function ProximasCitas() {
                 <p className="text-gray-600">{selectedCita.telefono}</p>
                 {getGoogleMapsUrl(selectedCita.coordinates, selectedCita.mapUrl) && (
                   <div className="flex flex-wrap gap-2 pt-2">
-                    <a href={getGoogleMapsUrl(selectedCita.coordinates, selectedCita.mapUrl)} target="_blank" rel="noreferrer" className="rounded-lg bg-[#003366] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#002244]">Abrir en Google Maps</a>
-                    {getWazeUrl(selectedCita.coordinates) && <a href={getWazeUrl(selectedCita.coordinates)} target="_blank" rel="noreferrer" className="rounded-lg bg-sky-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-sky-600">Abrir en Waze</a>}
+                    <a href={getGoogleMapsUrl(selectedCita.coordinates, selectedCita.mapUrl)} target="_blank" rel="noreferrer" className="admin-btn admin-btn-secondary text-xs px-3 py-2">Abrir en Google Maps</a>
+                    {getWazeUrl(selectedCita.coordinates) && <a href={getWazeUrl(selectedCita.coordinates)} target="_blank" rel="noreferrer" className="admin-btn admin-btn-primary text-xs px-3 py-2">Abrir en Waze</a>}
                   </div>
                 )}
               </div>
             </div>
 
             {/* Descripción técnica */}
-            <div
-              className="p-4 rounded-lg mb-6"
-              style={{
-                background: "rgba(255, 255, 255, 0.3)",
-                border: "1px solid rgba(0, 0, 0, 0.1)",
-              }}
-            >
+            <div className="p-4 rounded-lg mb-6 bg-slate-50 border border-slate-200">
               <h3 className="font-bold text-gray-900 mb-2">Descripción Técnica</h3>
               <p className="text-sm text-gray-700 leading-relaxed">{selectedCita.descripcion}</p>
             </div>
 
             {selectedCita.isCompleted && (
-              <div
-                className="p-4 rounded-lg mb-6"
-                style={{ background: "rgba(34, 197, 94, 0.12)", border: "1px solid rgba(34, 197, 94, 0.3)" }}
-              >
+              <div className="p-4 rounded-lg mb-6 bg-emerald-50 border border-emerald-200">
                 <h3 className="font-bold text-gray-900 mb-2">Observaciones de finalización</h3>
                 <p className="text-sm text-gray-700 leading-relaxed">{selectedCita.completionNotes || "Sin observaciones registradas."}</p>
               </div>
             )}
 
-            {/* Botones de acción */}
-            <div className="flex items-center justify-between gap-3">
-              <button
-                onClick={handleCloseDetails}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-black/10 transition-all duration-200"
-                style={{
-                  background: "rgba(255,255,255,0.5)",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                }}
-              >
-                Cerrar
-              </button>
-              <button
-                onClick={() => handleOpenEdit(selectedCita)}
-                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02]"
-                style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-                  boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)",
-                }}
-              >
-                Editar
-              </button>
+            </div>
+            <div className="admin-modal-footer">
+              <AdminSecondaryButton type="button" onClick={handleCloseDetails}>Cerrar</AdminSecondaryButton>
+              <AdminPrimaryButton type="button" onClick={() => handleOpenEdit(selectedCita)}>Editar</AdminPrimaryButton>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL: Editar Cita */}
       {showModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4"
-          style={{ zIndex: 100 }}
-        >
-          {/* Overlay oscuro */}
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={handleCloseModal}
-          />
-
-          {/* Contenido del modal */}
-          <div
-              className="relative w-full max-w-[620px] rounded-2xl p-5 sm:p-8 max-h-[90vh] overflow-y-auto"
-            style={{
-              background: "linear-gradient(135deg, rgba(200, 200, 210, 0.85) 0%, rgba(180, 180, 195, 0.80) 100%)",
-              backdropFilter: "blur(40px)",
-              WebkitBackdropFilter: "blur(40px)",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
-              boxShadow: "0 25px 60px rgba(0,0,0,0.5)",
-            }}
-          >
-            {/* Header del modal */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Editar Cita</h2>
-              <button
-                onClick={handleCloseModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/10 transition-all duration-200"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div className="admin-modal-overlay" onClick={handleCloseModal}>
+          <div className="admin-modal max-h-[90vh] overflow-y-auto" style={{ maxWidth: "620px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Editar Cita</h2>
+              <button type="button" onClick={handleCloseModal} className="admin-btn admin-btn-icon admin-btn-secondary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-
-            {/* Fila: Nombre y Servicio */}
+            <div className="admin-modal-body">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">Nombre</label>
@@ -1501,35 +1146,14 @@ export default function ProximasCitas() {
               )}
             </div>
 
-            {/* Separador */}
-            <div className="border-t border-black/10 mb-6" />
-
-            {/* Botones de accion */}
-            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3">
-              <button
-                onClick={handleCloseModal}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-700 transition-all duration-200 hover:bg-black/10"
-                style={{
-                  background: "rgba(255,255,255,0.5)",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveCita}
-                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:scale-[1.02]"
-                style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-                  boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)",
-                }}
-              >
-                Guardar Cita
-              </button>
+            </div>
+            <div className="admin-modal-footer flex-col-reverse sm:flex-row">
+              <AdminSecondaryButton type="button" onClick={handleCloseModal}>Cancelar</AdminSecondaryButton>
+              <AdminPrimaryButton type="button" onClick={handleSaveCita}>Guardar Cita</AdminPrimaryButton>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   )
 }

@@ -222,10 +222,16 @@ export function AuthProvider({ children }) {
     }
 
     if (!response.ok) {
+      if (
+        (response.status === 403 || response.status === 401)
+        && (payload?.message === "Authentication required" || payload?.message === "Invalid or expired session")
+      ) {
+        persistSession(null);
+      }
       throw new Error(payload?.message || `Error ${response.status}: ${response.statusText}`);
     }
     return payload;
-  }, []);
+  }, [persistSession]);
 
   const value = {
     user,
