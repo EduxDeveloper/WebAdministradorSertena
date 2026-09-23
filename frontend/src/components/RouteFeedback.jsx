@@ -1,4 +1,4 @@
-import { Link, Navigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import useAuth from "../hooks/useAuth"
 
 function StatusLayout({ code, title, description, actionTo, actionLabel }) {
@@ -47,5 +47,13 @@ export function AdminUnknownRoute() {
 
   if (loading) return null
 
-  return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
+  return (
+    <StatusLayout
+      code="404"
+      title="Página no encontrada"
+      description="La dirección que ingresaste no existe o ya no está disponible."
+      actionTo={isAuthenticated ? "/dashboard" : "/login"}
+      actionLabel={isAuthenticated ? "Volver al dashboard" : "Ir al inicio de sesión"}
+    />
+  )
 }
