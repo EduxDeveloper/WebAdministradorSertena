@@ -236,8 +236,8 @@ export default function Resenias() {
           </div>
         )}
 
-        <div className="flex items-center justify-between w-full mt-2 text-sm admin-text-muted px-2">
-          <div className="flex items-center gap-2">
+        <div className="admin-pagination">
+          <div className="admin-pagination-size">
             <span>Mostrar</span>
             <select
               value={limit}
@@ -253,9 +253,9 @@ export default function Resenias() {
             </select>
             <span>registros</span>
           </div>
-          <div className="flex items-center gap-4">
-            <span>Página {page} de {totalPages || 1} ({total} en total)</span>
-            <div className="flex items-center gap-1">
+          <div className="admin-pagination-controls">
+            <span className="admin-pagination-status">Página {page} de {totalPages || 1} ({total} en total)</span>
+            <div className="admin-pagination-buttons">
               <button
                 type="button"
                 onClick={() => setPage(p => Math.max(1, p - 1))}

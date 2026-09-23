@@ -616,6 +616,39 @@ body {
   background: #f8fafc;
 }
 
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0 0.5rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.admin-pagination-size,
+.admin-pagination-controls,
+.admin-pagination-buttons {
+  display: flex;
+  align-items: center;
+}
+
+.admin-pagination-size {
+  gap: 0.5rem;
+}
+
+.admin-pagination-controls {
+  gap: 1rem;
+  min-width: 0;
+}
+
+.admin-pagination-buttons {
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
 /* Navegación y contenido administrativo en tabletas y teléfonos. */
 @media (max-width: 1023px) {
   .admin-main {
@@ -639,6 +672,7 @@ body {
   .admin-main {
     padding-left: 1rem;
     padding-right: 1rem;
+    overflow-x: hidden;
   }
 
   .admin-page-header {
@@ -649,5 +683,36 @@ body {
   .admin-main .grid.grid-cols-3,
   .admin-main .grid.grid-cols-2 {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-pagination {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .admin-pagination-size {
+    justify-content: center;
+  }
+
+  .admin-pagination-controls {
+    flex-direction: column;
+    gap: 0.625rem;
+    width: 100%;
+  }
+
+  .admin-pagination-status {
+    text-align: center;
+  }
+
+  .admin-pagination-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .admin-pagination-buttons .admin-btn {
+    justify-content: center;
+    width: 100%;
   }
 }

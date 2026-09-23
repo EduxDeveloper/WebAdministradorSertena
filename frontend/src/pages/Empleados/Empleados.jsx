@@ -457,8 +457,8 @@ export default function Empleados() {
           </div>
         )}
 
-        <div className="flex items-center justify-between w-full mt-2 text-sm admin-text-muted px-2">
-          <div className="flex items-center gap-2">
+        <div className="admin-pagination">
+          <div className="admin-pagination-size">
             <span>Mostrar</span>
             <select value={limit} onChange={(e) => { setLimit(Number(e.target.value)); setPage(1) }} className="admin-input w-auto py-1 px-2">
               <option value={4}>4</option>
@@ -467,9 +467,9 @@ export default function Empleados() {
             </select>
             <span>registros</span>
           </div>
-          <div className="flex items-center gap-4">
-            <span>Página {page} de {totalPages || 1} ({total} en total)</span>
-            <div className="flex items-center gap-1">
+          <div className="admin-pagination-controls">
+            <span className="admin-pagination-status">Página {page} de {totalPages || 1} ({total} en total)</span>
+            <div className="admin-pagination-buttons">
               <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="admin-btn admin-btn-secondary px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed">Anterior</button>
               <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages || totalPages === 0} className="admin-btn admin-btn-secondary px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed">Siguiente</button>
             </div>
