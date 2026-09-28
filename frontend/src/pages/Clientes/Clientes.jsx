@@ -99,6 +99,14 @@ export default function Clientes() {
       })
       handleCloseModal()
       loadClientes() // Recargar la tabla
+      Swal.fire({
+        title: "¡Éxito!",
+        text: "Cliente creado correctamente",
+        icon: "success",
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: "#0d9488"
+      })
     } catch (error) {
       console.error("Error al crear cliente:", error)
       setApiError(error.message || "Hubo un error al crear el cliente. Intenta nuevamente.")

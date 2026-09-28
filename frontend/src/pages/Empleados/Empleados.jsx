@@ -141,6 +141,14 @@ export default function Empleados() {
       }
       handleCloseModal()
       loadEmpleados() // Recargar la tabla
+      Swal.fire({
+        title: "¡Éxito!",
+        text: formData.id ? "Empleado actualizado correctamente" : "Empleado creado correctamente",
+        icon: "success",
+        background: "#ffffff",
+        color: "#0f172a",
+        confirmButtonColor: "#0d9488"
+      })
     } catch (error) {
       console.error("Error al guardar empleado:", error)
       setApiError(error.message || "Hubo un error al guardar el empleado. Intenta nuevamente.")
