@@ -311,29 +311,48 @@ export default function Clientes() {
               </button>
             </div>
             <div className="admin-modal-body">
-              <label className="admin-label mb-5 block">Nombre
-                <input type="text" value={formData.nombre} onChange={(e) => handleFieldChange("nombre", e.target.value)} className={`admin-input ${errors.nombre ? "border-red-400" : ""}`} />
+              <label className="admin-label mb-5 block">Nombre / Razón Social
+                <input
+                  type="text"
+                  placeholder="Ej: Constructora Del Valle S.A. o María Gómez"
+                  value={formData.nombre}
+                  onChange={(e) => handleFieldChange("nombre", e.target.value)}
+                  className={`admin-input ${errors.nombre ? "border-red-400" : ""}`}
+                />
                 {errors.nombre && <p className="mt-1.5 text-xs font-medium text-red-600">{errors.nombre}</p>}
               </label>
-              <label className="admin-label mb-5 block">Correo
-                <input type="email" value={formData.email} onChange={(e) => handleFieldChange("email", e.target.value)} className={`admin-input ${errors.email ? "border-red-400" : ""}`} />
+              <label className="admin-label mb-5 block">Correo Electrónico
+                <input
+                  type="email"
+                  placeholder="Ej: contacto@constructoradelvalle.com o maria@gmail.com"
+                  value={formData.email}
+                  onChange={(e) => handleFieldChange("email", e.target.value)}
+                  className={`admin-input ${errors.email ? "border-red-400" : ""}`}
+                />
                 {errors.email && <p className="mt-1.5 text-xs font-medium text-red-600">{errors.email}</p>}
               </label>
               <div className="grid grid-cols-2 gap-4 mb-5">
                 <label className="admin-label">Contraseña
-                  <input type="password" autoComplete="new-password" value={formData.contraseña} onChange={(e) => handleFieldChange("contraseña", e.target.value)} className={`admin-input ${errors.contraseña ? "border-red-400" : ""}`} />
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="Ej: ClaveSegura#2026 (mín. 6 caracteres)"
+                    value={formData.contraseña}
+                    onChange={(e) => handleFieldChange("contraseña", e.target.value)}
+                    className={`admin-input ${errors.contraseña ? "border-red-400" : ""}`}
+                  />
                   {errors.contraseña && <p className="mt-1.5 text-xs font-medium text-red-600">{errors.contraseña}</p>}
                 </label>
-                <label className="admin-label">Tipo
+                <label className="admin-label">Tipo de Cliente
                   <select
                     value={formData.tipo}
                     onChange={(e) => handleFieldChange("tipo", e.target.value)}
                     className={`admin-select mt-2 ${errors.tipo ? "border-red-400" : ""}`}
                   >
-                    <option value="">Selecciona un tipo...</option>
-                    <option value="empresa">Empresa</option>
-                    <option value="personal">Personal</option>
-                    <option value="cliente">Cliente</option>
+                    <option value="">Selecciona tipo (Ej: Empresa, Personal...)</option>
+                    <option value="empresa">Empresa (Comercial / Industrial)</option>
+                    <option value="personal">Personal (Particular / Residencial)</option>
+                    <option value="cliente">Cliente (General)</option>
                   </select>
                   {errors.tipo && <p className="mt-1.5 text-xs font-medium text-red-600">{errors.tipo}</p>}
                 </label>

@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react"
 import AdminLayout, { AdminPageHeader, AdminPrimaryButton, AdminSecondaryButton, AdminStatCard, AdminStatGrid } from "../../components/ui/AdminLayout"
 import useAuth from "../../hooks/useAuth"
+import { generateDashboardPDF } from "../../utils/generateDashboardPDF"
+import Swal from "sweetalert2"
 
 /**
  * Pagina del panel principal (Dashboard) - Coincide exactamente con el diseño de Sertena.
@@ -295,6 +297,54 @@ export default function Dashboard() {
     setSelectedBar(topIndex)
   }, [chartData, maxChartValue])
 
+  const [exporting, setExporting] = useState(false)
+
+  const handleExportPDF = async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      Swal.fire({
+        title: "Generando Reporte PDF",
+        text: "Compilando resumen de ventas y métricas operativas...",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading()
+        },
+        background: "#001a1a",
+        color: "#fff",
+      })
+
+      await generateDashboardPDF({
+        proyectos,
+        stats,
+        userEmail: "Administrador Sertena",
+      })
+
+      Swal.fire({
+        icon: "success",
+        title: "Reporte Exportado",
+        text: "El archivo PDF ha sido descargado exitosamente con todas las ventas y métricas.",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9",
+        timer: 2500,
+        showConfirmButton: false,
+      })
+    } catch (err) {
+      console.error("Error al exportar PDF:", err)
+      Swal.fire({
+        icon: "error",
+        title: "Error al exportar",
+        text: "Ocurrió un problema al generar el documento PDF. Intenta nuevamente.",
+        background: "#001a1a",
+        color: "#fff",
+        confirmButtonColor: "#00E9E9",
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <AdminLayout activeTab="Inicio">
         <AdminPageHeader
@@ -302,13 +352,13 @@ export default function Dashboard() {
           title="Resumen General"
           description="Monitoreo de operaciones industriales en tiempo real"
           action={
-            <AdminSecondaryButton>
+            <AdminSecondaryButton onClick={handleExportPDF} disabled={exporting || loading}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Exportar
+              {exporting ? "Exportando..." : "Exportar"}
             </AdminSecondaryButton>
           }
         />

@@ -106,8 +106,16 @@ export default function Empleados() {
       newErrors.email = "Ingresa un correo electronico valido."
     }
 
-    if (formData.contraseña.length < 6) {
-      newErrors.contraseña = "La contraseña debe tener al menos 6 caracteres."
+    // Si es un empleado nuevo, la contraseña es obligatoria (mín. 6 caracteres).
+    // Si se está actualizando (formData.id), la contraseña es opcional: solo se valida si escribe algo.
+    if (!formData.id) {
+      if (!formData.contraseña || formData.contraseña.length < 6) {
+        newErrors.contraseña = "La contraseña es obligatoria y debe tener al menos 6 caracteres."
+      }
+    } else if (formData.contraseña && formData.contraseña.trim().length > 0) {
+      if (formData.contraseña.trim().length < 6) {
+        newErrors.contraseña = "Si deseas cambiar la contraseña, debe tener al menos 6 caracteres."
+      }
     }
 
     const salarioLimpio = parseFloat(String(formData.salario).replace(/[^0-9.]/g, ""))
@@ -124,19 +132,25 @@ export default function Empleados() {
     setApiError("")
     if (!validateForm()) return
 
+    const payload = { ...formData }
+    // Al actualizar, si la contraseña se dejó en blanco no la enviamos para mantener la existente
+    if (formData.id && (!payload.contraseña || payload.contraseña.trim() === "")) {
+      delete payload.contraseña
+    }
+
     try {
       if (formData.id) {
         await fetchApi(`/empleados/actualizar/${formData.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         })
       } else {
         setSaving(true)
-      await fetchApi("/empleados/crear", {
+        await fetchApi("/empleados/crear", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         })
       }
       handleCloseModal()
@@ -498,24 +512,56 @@ export default function Empleados() {
             </div>
             <div className="admin-modal-body">
               <label className="admin-label mb-5 block">Nombre
-                <input type="text" value={formData.nombre} onChange={(e) => handleFieldChange("nombre", e.target.value)} className={`admin-input ${errors.nombre ? "border-red-400" : ""}`} />
+                <input
+                  type="text"
+                  placeholder="Ej: Carlos"
+                  value={formData.nombre}
+                  onChange={(e) => handleFieldChange("nombre", e.target.value)}
+                  className={`admin-input ${errors.nombre ? "border-red-400" : ""}`}
+                />
                 {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
               </label>
               <label className="admin-label mb-5 block">Apellido
-                <input type="text" value={formData.apellido} onChange={(e) => handleFieldChange("apellido", e.target.value)} className={`admin-input ${errors.apellido ? "border-red-400" : ""}`} />
+                <input
+                  type="text"
+                  placeholder="Ej: Martínez"
+                  value={formData.apellido}
+                  onChange={(e) => handleFieldChange("apellido", e.target.value)}
+                  className={`admin-input ${errors.apellido ? "border-red-400" : ""}`}
+                />
                 {errors.apellido && <p className="text-red-500 text-xs mt-1">{errors.apellido}</p>}
               </label>
               <label className="admin-label mb-5 block">Email
-                <input type="email" value={formData.email} onChange={(e) => handleFieldChange("email", e.target.value)} className={`admin-input ${errors.email ? "border-red-400" : ""}`} />
+                <input
+                  type="email"
+                  placeholder="Ej: carlos.martinez@sertena.com"
+                  value={formData.email}
+                  onChange={(e) => handleFieldChange("email", e.target.value)}
+                  className={`admin-input ${errors.email ? "border-red-400" : ""}`}
+                />
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </label>
               <div className="grid grid-cols-2 gap-4 mb-5">
-                <label className="admin-label">Contraseña
-                  <input type="password" autoComplete="new-password" value={formData.contraseña} onChange={(e) => handleFieldChange("contraseña", e.target.value)} className={`admin-input ${errors.contraseña ? "border-red-400" : ""}`} />
+                <label className="admin-label">
+                  Contraseña {formData.id ? <span className="text-[11px] font-normal text-gray-500">(Opcional)</span> : null}
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder={formData.id ? "En blanco = no cambia" : "Mínimo 6 caracteres"}
+                    value={formData.contraseña}
+                    onChange={(e) => handleFieldChange("contraseña", e.target.value)}
+                    className={`admin-input ${errors.contraseña ? "border-red-400" : ""}`}
+                  />
                   {errors.contraseña && <p className="text-red-500 text-xs mt-1">{errors.contraseña}</p>}
                 </label>
                 <label className="admin-label">Salario
-                  <input type="text" value={formData.salario} onChange={(e) => handleFieldChange("salario", e.target.value)} placeholder="$0.00" className={`admin-input ${errors.salario ? "border-red-400" : ""}`} />
+                  <input
+                    type="text"
+                    placeholder="Ej: 1200.00"
+                    value={formData.salario}
+                    onChange={(e) => handleFieldChange("salario", e.target.value)}
+                    className={`admin-input ${errors.salario ? "border-red-400" : ""}`}
+                  />
                   {errors.salario && <p className="text-red-500 text-xs mt-1">{errors.salario}</p>}
                 </label>
               </div>

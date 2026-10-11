@@ -63,7 +63,7 @@ export default function Login() {
     // Activamos el estado de carga para mostrar "Ingresando..." en el boton
     setIsLoading(true)
 
-    // Llamada REAL al backend via el contexto de autenticacion
+    // Llamada REAL al backend via el contexto de autenticacion (intenta admin, luego empleado)
     const result = await login({ email, password })
 
     setIsLoading(false)
@@ -115,7 +115,7 @@ export default function Login() {
           <div
             style={{
               textAlign: 'center',
-              marginBottom: '40px',
+              marginBottom: '28px',
               animation: 'fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both',
             }}
           >
@@ -131,6 +131,8 @@ export default function Login() {
               }}
             />
           </div>
+
+
 
           {/* Formulario de inicio de sesion */}
           {/* noValidate desactiva el globo nativo del navegador para que mande el control a nuestra validacion inline (errors) */}

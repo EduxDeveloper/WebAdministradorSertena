@@ -68,6 +68,8 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async ({ email, password }) => {
     const normalizedEmail = email.trim().toLowerCase();
+
+    // 1. Intentar primero iniciar sesión como administrador
     const adminResult = await requestApi("/adminLogin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -76,19 +78,25 @@ export function AuthProvider({ children }) {
 
     if (adminResult.response?.ok) {
       persistSession({ email: normalizedEmail, role: "admin" });
-      return { ok: true, role: "admin", message: adminResult.payload.message || "Sesión iniciada correctamente" };
+      return { ok: true, role: "admin", message: adminResult.payload?.message || "Sesión iniciada correctamente" };
     }
 
-    // Solo se intenta el login de empleado cuando el backend confirma que el correo
-    // no pertenece a un administrador. Una contraseña incorrecta de admin no debe
-    // probarse contra otro tipo de cuenta.
-    const adminNotFound = adminResult.response?.status === 400
-      && adminResult.payload?.message === "Admin not found";
+    // Comprobar si el administrador no fue encontrado (mismo flujo que recuperación de contraseña)
+    const adminNotFound = (
+      adminResult.response?.status === 400 ||
+      adminResult.response?.status === 404
+    ) && (
+      adminResult.payload?.message === "Admin not found" ||
+      !adminResult.payload?.message ||
+      adminResult.payload?.message?.toLowerCase().includes("not found")
+    );
 
+    // Si el error fue por contraseña incorrecta u otro fallo del admin, no intentar empleado
     if (!adminNotFound) {
-      return { ok: false, message: getErrorMessage(adminResult, "No se pudo iniciar sesión") };
+      return { ok: false, message: getErrorMessage(adminResult, "Credenciales incorrectas") };
     }
 
+    // 2. Si no es admin, intentar como empleado
     const employeeResult = await requestApi("/loginEmpleado", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -96,33 +104,34 @@ export function AuthProvider({ children }) {
     });
 
     if (!employeeResult.response?.ok) {
-      return { ok: false, message: getErrorMessage(employeeResult, "No se pudo iniciar sesión") };
+      return { ok: false, message: getErrorMessage(employeeResult, "Credenciales incorrectas") };
     }
 
-    // El endpoint de login de empleado no devuelve su id. Se consulta el recurso
-    // existente de empleados una vez para poder filtrar sus citas por idEmpleado.
-    const employeesResult = await requestApi("/empleados/obtener");
-    const employee = Array.isArray(employeesResult.payload)
-      ? employeesResult.payload.find((item) => String(item.email || "").toLowerCase() === normalizedEmail)
-      : null;
+    let employee = employeeResult.payload?.user;
+    if (!employee?._id && !employee?.id) {
+      const employeesResult = await requestApi("/empleados/obtener");
+      employee = Array.isArray(employeesResult.payload)
+        ? employeesResult.payload.find((item) => String(item.email || "").toLowerCase() === normalizedEmail)
+        : null;
+    }
 
-    if (!employee?._id) {
+    if (!employee?._id && !employee?.id) {
       await requestApi("/logoutEmpleado", { method: "POST" });
       return { ok: false, message: "No fue posible identificar el perfil del empleado" };
     }
 
-    const name = [employee.nombre || employee.name, employee.apellido || employee.lastName]
+    const name = [employee?.nombre || employee?.name, employee?.apellido || employee?.lastName]
       .filter(Boolean)
       .join(" ");
 
     persistSession({
       email: normalizedEmail,
       role: "employee",
-      employeeId: employee._id,
+      employeeId: employee?._id || employee?.id,
       name: name || normalizedEmail,
     });
 
-    return { ok: true, role: "employee", message: employeeResult.payload.message || "Sesión iniciada correctamente" };
+    return { ok: true, role: "employee", message: employeeResult.payload?.message || "Sesión iniciada correctamente" };
   }, [persistSession]);
 
   const requestRecoveryCode = useCallback(async ({ email }) => {
