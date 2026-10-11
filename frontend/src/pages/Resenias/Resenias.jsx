@@ -17,17 +17,27 @@ export default function Resenias() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
   const [viewMode, setViewMode] = useState("list")
+  const [ratingFilter, setRatingFilter] = useState("")
   const { fetchApi } = useAuth()
 
-  // Cargar reseñas al montar y cuando cambie pagina/limite
+  // Cargar reseñas al montar y cuando cambie pagina/limite/ratingFilter
   useEffect(() => {
     loadResenias()
-  }, [page, limit])
+  }, [page, limit, ratingFilter])
 
   async function loadResenias() {
     try {
       setLoading(true)
-      const data = await fetchApi(`/reviews/paginado?page=${page}&limit=${limit}`)
+      const queryParams = new URLSearchParams({
+        page,
+        limit,
+      });
+      
+      if (ratingFilter) {
+        queryParams.append('rating', ratingFilter);
+      }
+
+      const data = await fetchApi(`/reviews/paginado?${queryParams.toString()}`)
       if (data && data.data) {
         setResenias(data.data)
         setTotalPages(data.totalPages)
@@ -164,7 +174,32 @@ export default function Resenias() {
           />
         </AdminStatGrid>
 
-        <div className="flex justify-end">
+        {/* Filtros de calificación + toggle de vista */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-slate-600">Filtrar por:</span>
+            {[
+              { label: 'Todas', value: '' },
+              { label: '⭐⭐⭐⭐⭐ 5 estrellas', value: '5' },
+              { label: '⭐⭐⭐⭐ 4 estrellas', value: '4' },
+              { label: '⭐⭐⭐ 3 estrellas', value: '3' },
+              { label: '⭐⭐ 2 estrellas', value: '2' },
+              { label: '⭐ 1 estrella', value: '1' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => { setRatingFilter(opt.value); setPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+                  ratingFilter === opt.value
+                    ? 'bg-amber-400 border-amber-500 text-white shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-amber-400 hover:text-amber-600'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
         </div>
 
